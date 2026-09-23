@@ -1,6 +1,10 @@
 export { uiStyles } from './styles.js';
 export { ContextCard } from './ContextCard.js';
 export { HealthPanel } from './HealthPanel.js';
-export { SnapshotSummary } from './SnapshotSummary.js';
+export { SbcChallengeCard, type SbcChallengeCardProps } from './SbcChallengeCard.js';
 export { SolutionView, type SolutionViewProps } from './SolutionView.js';
 export { AssistantButton, type AssistantButtonProps } from './AssistantButton.js';
+export { ProvenanceBadge, FreshnessBadge } from './Badges.js';
+export { PerfPanel } from './PerfPanel.js';
+export { InspectionSummary } from './InspectionSummary.js';
+export { requirementLabel, PROVENANCE_LABEL } from './labels.js';

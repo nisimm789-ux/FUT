@@ -3,6 +3,7 @@ import { CONTRACTS_VERSION } from './version.js';
 import { CoinsSchema, IdSchema } from './primitives.js';
 import { ClubItemSchema } from './club.js';
 import { SbcChallengeSnapshotSchema } from './sbc.js';
+import { ProvenanceSchema } from './provenance.js';
 
 export const SolverStrategySchema = z.enum([
   'DUPLICATES_FIRST',
@@ -33,6 +34,8 @@ export const SolveProblemSchema = z.object({
   schemaVersion: z.literal(CONTRACTS_VERSION),
   challenge: SbcChallengeSnapshotSchema,
   candidates: z.array(ClubItemSchema).max(20_000),
+  /** Provenance of the candidate items (the challenge carries its own). */
+  candidatesProvenance: ProvenanceSchema,
   options: SolverOptionsSchema,
 });
 export type SolveProblem = z.infer<typeof SolveProblemSchema>;
@@ -49,6 +52,7 @@ export const ExclusionReasonSchema = z.enum([
   'PROTECTED',
   'NOT_ELIGIBLE_LOCATION',
   'VIOLATES_PLAYER_RATING_RANGE',
+  'VIOLATES_PLAYER_QUALITY',
   'LOCKED_ITEM_MISSING',
 ]);
 export type ExclusionReason = z.infer<typeof ExclusionReasonSchema>;
@@ -80,12 +84,14 @@ export const SolveResultSchema = z.object({
   status: SolveStatusSchema,
   challengeId: IdSchema,
   strategy: SolverStrategySchema,
+  /** Echo of input provenance so a result can never be mistaken for a live recommendation. */
+  inputProvenance: z.object({ challenge: ProvenanceSchema, candidates: ProvenanceSchema }),
   selected: z.array(SelectedItemSchema).max(11),
   squadRating: z.number().int().nullable(),
   totalCost: z.number().finite(),
   additionalCoinsRequired: CoinsSchema,
   evaluations: z.array(RequirementEvaluationSchema),
-  /** Requirement types this solver version does not handle (status UNSUPPORTED). */
+  /** Requirements this solver version cannot verify (status UNSUPPORTED). */
   unsupportedRequirementIds: z.array(IdSchema),
   debug: z.object({
     solverId: z.string(),

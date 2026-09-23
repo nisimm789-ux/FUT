@@ -1,17 +1,21 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "challengeId": "ch-1001",
+  "challengeIdKind": "FIXTURE",
   "setId": "set-10",
   "name": "Fixture Challenge: Squad Foundations",
   "squadSize": 11,
+  "filledSlots": null,
   "requirements": [
     {
       "id": "req-1",
+      "via": "structure",
       "type": "MIN_SQUAD_RATING",
       "value": 75
     },
     {
       "id": "req-2",
+      "via": "structure",
       "type": "MIN_COUNT",
       "count": 2,
       "filter": {
@@ -22,6 +26,7 @@
     },
     {
       "id": "req-3",
+      "via": "structure",
       "type": "MIN_COUNT",
       "count": 1,
       "filter": {
@@ -32,22 +37,27 @@
     },
     {
       "id": "req-4",
+      "via": "structure",
       "type": "MAX_SAME",
       "dimension": "club",
       "count": 4
     },
     {
       "id": "req-5",
+      "via": "structure",
       "type": "MIN_UNIQUE",
       "dimension": "league",
       "count": 3
     },
     {
       "id": "req-6",
+      "via": "structure",
       "type": "PLAYER_RATING_RANGE",
       "min": 65
     }
   ],
-  "source": "fixture",
+  "interpretationLocale": null,
+  "provenance": "LOCAL_FIXTURE",
+  "adapter": null,
   "observedAt": 0
 }

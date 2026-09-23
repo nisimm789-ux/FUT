@@ -30,6 +30,7 @@ describe('POC pipeline: fixture -> adapter -> snapshot -> solver -> result', () 
       schemaVersion: CONTRACTS_VERSION,
       challenge: sbc.value,
       candidates: club.value.items,
+      candidatesProvenance: club.value.provenance,
       options: { strategy: 'BALANCED' as const, protectedItemIds: [], lockedItemIds: [], maxAdditionalCoins: 0 },
     };
     const result = SolveResultSchema.parse(await runtime.solve(problem));

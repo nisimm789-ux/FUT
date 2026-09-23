@@ -26,7 +26,7 @@ describe('telemetry', () => {
     const report = buildDebugReport({
       extensionVersion: '0.1.0',
       adapterVersion: '0.1.0',
-      context: { schemaVersion: 1, kind: 'CLUB', confidence: 'high', signals: ['view:club'], profileId: 'p', observedAt: 0 },
+      context: { schemaVersion: 2, kind: 'CLUB', confidence: 'high', signals: ['view:club'], profileId: 'p', observedAt: 0 },
       health: null,
       clubItemCount: 42,
       sbcRequirementTypes: ['MIN_COUNT', 'MIN_COUNT', 'MAX_SAME'],

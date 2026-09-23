@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EaContextSnapshotSchema, type EaContextKind } from '@fc/contracts';
 import type { FixturePage } from '@fc/ea-fixtures';
-import { detectContext, eaWebCandidateProfile, selectProfile, syntheticV1Profile } from '../src/index.js';
+import { detectContext, fc27LiveProfile, selectProfile, syntheticV1Profile } from '../src/index.js';
 import { loadPage } from './helpers.js';
 
 describe('detectContext (synthetic-v1 fixtures)', () => {
@@ -46,9 +46,10 @@ describe('detectContext (synthetic-v1 fixtures)', () => {
     }
   });
 
-  it('the unverified live candidate profile defines no readers', () => {
-    expect(eaWebCandidateProfile.verified).toBe(false);
-    expect(eaWebCandidateProfile.sbc).toBeUndefined();
-    expect(eaWebCandidateProfile.club).toBeUndefined();
+  it('the FC 27 live profile is marked unverified and does not read the club (Phase 1B)', () => {
+    expect(fc27LiveProfile.verified).toBe(false);
+    expect(fc27LiveProfile.live).toBe(true);
+    expect(fc27LiveProfile.sbc).toBeDefined();
+    expect(fc27LiveProfile.club).toBeUndefined();
   });
 });

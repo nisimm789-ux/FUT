@@ -37,7 +37,7 @@ export function createClubReader(selectors: ClubSelectors): ClubReader {
         schemaVersion: CONTRACTS_VERSION,
         coverage: complete ? 'complete' : 'partial',
         items,
-        source: 'ea-web',
+        provenance: ctx.provenance,
         observedAt: ctx.now,
       };
       return { ok: true, value: snapshot };

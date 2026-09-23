@@ -8,13 +8,20 @@ export function HealthPanel({ health }: { health: AdapterHealth | null }) {
         <>
           <dl className="fca-kv">
             <dt>Adapter</dt>
-            <dd>v{health.adapterVersion} · {health.profileId}</dd>
+            <dd>
+              v{health.adapterVersion} · {health.profileId}{' '}
+              {!health.profileVerified && health.profileId !== 'none' && (
+                <span className="fca-pill fca-state-degraded" data-testid="unverified">UNVERIFIED PROFILE</span>
+              )}
+            </dd>
             <dt>Safe mode</dt>
             <dd>{health.safeMode ? 'ON — read capabilities disabled' : 'off'}</dd>
             {health.lastFailure && (
               <>
                 <dt>Last failure</dt>
-                <dd>{health.lastFailure.capability}: {health.lastFailure.category}</dd>
+                <dd>
+                  {health.lastFailure.capability}: {health.lastFailure.category} ({health.recentFailures.length} recent)
+                </dd>
               </>
             )}
           </dl>

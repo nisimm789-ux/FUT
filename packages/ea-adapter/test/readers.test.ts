@@ -19,8 +19,10 @@ describe('EA adapter readers against synthetic fixtures (golden files)', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const golden = loadSbcFixture();
-    expect({ ...result.value, source: golden.source, observedAt: golden.observedAt }).toEqual(golden);
-    expect(result.value.source).toBe('ea-web');
+    expect({ ...result.value, adapter: null, observedAt: golden.observedAt }).toEqual(golden);
+    // Synthetic profile => never live, whatever the page claims.
+    expect(result.value.provenance).toBe('LOCAL_FIXTURE');
+    expect(result.value.adapter).toEqual({ adapterVersion: '0.2.0', profileId: 'synthetic-v1', profileVerified: true });
   });
 
   it('normalizes the club page exactly as the golden snapshot', () => {
@@ -29,7 +31,7 @@ describe('EA adapter readers against synthetic fixtures (golden files)', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const golden = loadClubFixture();
-    expect({ ...result.value, source: golden.source, observedAt: golden.observedAt }).toEqual(golden);
+    expect({ ...result.value, observedAt: golden.observedAt }).toEqual(golden);
   });
 
   it('maps unknown requirement kinds to UNKNOWN rather than dropping them', () => {

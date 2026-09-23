@@ -56,7 +56,7 @@ describe('solveLocally', () => {
     const items = Array.from({ length: 11 }, (_, i) => makeItem(`p${i + 1}`));
     const result = solveLocally(
       makeProblem(
-        { challengeId: 'c', squadSize: 11, requirements: [{ id: 'r1', type: 'MIN_CHEMISTRY', value: 20 }, { id: 'r2', type: 'UNKNOWN', reason: 'x' }] },
+        { challengeId: 'c', squadSize: 11, requirements: [{ id: 'r1', type: 'MIN_CHEMISTRY', value: 20 }, { id: 'r2', type: 'UNKNOWN', reason: 'UNRECOGNIZED_TEXT', structuralFingerprint: '0000abcd', rawSafeDescription: null }] },
         items,
       ),
       fixedClock,
@@ -84,6 +84,58 @@ describe('solveLocally', () => {
     const result = solveLocally(makeProblem({ challengeId: 'c', squadSize: 2, requirements: [{ id: 'r', type: 'MIN_SQUAD_RATING', value: 1 }] }, items), fixedClock);
     const defs = result.selected.map((s) => items.find((i) => i.id === s.itemId)?.definitionId);
     expect(new Set(defs).size).toBe(defs.length);
+  });
+
+  it('echoes input provenance so results cannot be mistaken for live recommendations', () => {
+    const result = solveLocally(makeProblem(loadSbcFixture(), loadClubFixture().items), fixedClock);
+    expect(result.inputProvenance).toEqual({ challenge: 'LOCAL_FIXTURE', candidates: 'LOCAL_FIXTURE' });
+    const live = solveLocally(makeProblem({ ...loadSbcFixture(), provenance: 'EA_WEB_LIVE' }, loadClubFixture().items), fixedClock);
+    expect(live.inputProvenance).toEqual({ challenge: 'EA_WEB_LIVE', candidates: 'LOCAL_FIXTURE' });
+  });
+
+  it('never reports SOLVED when a requirement cannot be verified (programme filter)', () => {
+    const items = Array.from({ length: 11 }, (_, i) => makeItem(`p${i + 1}`, { rating: 90 }));
+    const result = solveLocally(
+      makeProblem(
+        {
+          challengeId: 'c',
+          squadSize: 11,
+          requirements: [
+            { id: 'r1', type: 'MIN_SQUAD_RATING', value: 80 },
+            { id: 'r2', type: 'MAX_COUNT', count: 0, filter: { programs: ['TOTW'] } },
+          ],
+        },
+        items,
+      ),
+      fixedClock,
+    );
+    expect(result.status).toBe('UNSUPPORTED');
+    expect(result.unsupportedRequirementIds).toEqual(['r2']);
+    expect(result.debug.notes.join(' ')).toContain('ITEM_PROGRAM_DATA_UNAVAILABLE');
+  });
+
+  it('handles EXACT_COUNT, MIN_SAME, MAX_UNIQUE, PLAYER_QUALITY and SQUAD_SIZE', () => {
+    const club = loadClubFixture();
+    const result = solveLocally(
+      makeProblem(
+        {
+          challengeId: 'c',
+          squadSize: 11,
+          requirements: [
+            { id: 'r1', type: 'SQUAD_SIZE', count: 11 },
+            { id: 'r2', type: 'EXACT_COUNT', count: 2, filter: { rarities: ['RARE'] } },
+            { id: 'r3', type: 'MIN_SAME', dimension: 'league', count: 4 },
+            { id: 'r4', type: 'MAX_UNIQUE', dimension: 'league', count: 4 },
+            { id: 'r5', type: 'PLAYER_QUALITY', min: 'SILVER' },
+          ],
+        },
+        club.items,
+      ),
+      fixedClock,
+    );
+    expect(result.status).toBe('SOLVED');
+    expect(result.evaluations.every((e) => e.satisfied)).toBe(true);
+    expect(result.debug.excluded.VIOLATES_PLAYER_QUALITY).toBeGreaterThan(0);
   });
 
   it('LocalSolverRuntime wraps the same solver', async () => {

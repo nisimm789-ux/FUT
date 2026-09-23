@@ -16,7 +16,7 @@ createServer(async (req, res) => {
     res.writeHead(302, { location: '/site/' }).end();
     return;
   }
-  if (url.pathname.startsWith('/site/img/')) {
+  if (url.pathname.startsWith('/site/img/') || url.pathname.startsWith('/fixture-assets/')) {
     res.writeHead(200, { 'content-type': 'image/svg+xml' }).end(placeholderSvg);
     return;
   }

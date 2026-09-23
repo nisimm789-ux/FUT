@@ -36,15 +36,24 @@ export const ParserFailureCategorySchema = z.enum([
 ]);
 export type ParserFailureCategory = z.infer<typeof ParserFailureCategorySchema>;
 
+export const AdapterFailureSchema = z.object({
+  capability: CapabilityNameSchema,
+  category: ParserFailureCategorySchema,
+  at: EpochMsSchema,
+});
+export type AdapterFailure = z.infer<typeof AdapterFailureSchema>;
+
 export const AdapterHealthSchema = z.object({
   schemaVersion: z.literal(CONTRACTS_VERSION),
   adapterVersion: z.string().min(1).max(32),
   profileId: z.string().min(1).max(64),
+  /** False until the active profile has been validated against the live Web App. */
+  profileVerified: z.boolean(),
   safeMode: z.boolean(),
   capabilities: z.record(CapabilityNameSchema, CapabilityStateSchema),
-  lastFailure: z
-    .object({ capability: CapabilityNameSchema, category: ParserFailureCategorySchema, at: EpochMsSchema })
-    .nullable(),
+  lastFailure: AdapterFailureSchema.nullable(),
+  /** Most recent failures, newest last (bounded). */
+  recentFailures: z.array(AdapterFailureSchema).max(10),
   updatedAt: EpochMsSchema,
 });
 export type AdapterHealth = z.infer<typeof AdapterHealthSchema>;
@@ -56,3 +65,29 @@ export const AdapterCapabilitiesSchema = z.object({
   supported: z.array(CapabilityNameSchema),
 });
 export type AdapterCapabilities = z.infer<typeof AdapterCapabilitiesSchema>;
+
+/** Timing statistic in milliseconds. */
+export const TimingStatSchema = z.object({
+  count: z.number().int().nonnegative(),
+  last: z.number().nonnegative(),
+  avg: z.number().nonnegative(),
+  max: z.number().nonnegative(),
+});
+export type TimingStat = z.infer<typeof TimingStatSchema>;
+
+export const PERF_TIMINGS = ['detectContext', 'readSbc', 'readClub', 'fingerprint', 'mutationToRefresh'] as const;
+export const PERF_COUNTERS = [
+  'rootMutationBatches',
+  'scopedMutationBatches',
+  'ticks',
+  'fingerprintUnchanged',
+  'rereads',
+  'duplicateSnapshotsSuppressed',
+] as const;
+
+/** Numbers only: safe for diagnostics and telemetry. */
+export const AdapterPerfSchema = z.object({
+  timings: z.record(z.enum(PERF_TIMINGS), TimingStatSchema),
+  counters: z.record(z.enum(PERF_COUNTERS), z.number().int().nonnegative()),
+});
+export type AdapterPerf = z.infer<typeof AdapterPerfSchema>;

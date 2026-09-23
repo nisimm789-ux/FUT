@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { qualityOf } from '@fc/contracts';
+import { QUALITY_ORDER, qualityOf } from '@fc/contracts';
 import type { ClubItem, SbcRequirement, SolverStrategy } from '@fc/contracts';
+import { SolveResultSchema } from '@fc/contracts';
 import { solveLocally } from '../src/index.js';
 import { makeProblem } from './helpers.js';
 
@@ -30,6 +31,20 @@ function independentlySatisfied(req: SbcRequirement, squad: ClubItem[], size: nu
       return squad.filter((i) => matches(i, req.filter)).length >= req.count;
     case 'MAX_COUNT':
       return squad.filter((i) => matches(i, req.filter)).length <= req.count;
+    case 'EXACT_COUNT':
+      return squad.filter((i) => matches(i, req.filter)).length === req.count;
+    case 'SQUAD_SIZE':
+      return squad.length === req.count;
+    case 'PLAYER_QUALITY': {
+      const idx = (q: string) => QUALITY_ORDER.indexOf(q as (typeof QUALITY_ORDER)[number]);
+      return squad.every((i) => (req.min === undefined || idx(qualityOf(i.rating)) >= idx(req.min)) && (req.max === undefined || idx(qualityOf(i.rating)) <= idx(req.max)));
+    }
+    case 'MIN_SAME':
+    case 'MAX_UNIQUE': {
+      const counts = new Map<number, number>();
+      for (const i of squad) counts.set(key(i, req.dimension), (counts.get(key(i, req.dimension)) ?? 0) + 1);
+      return req.type === 'MIN_SAME' ? Math.max(0, ...counts.values()) >= req.count : counts.size <= req.count;
+    }
     case 'PLAYER_RATING_RANGE':
       return squad.every((i) => (req.min === undefined || i.rating >= req.min) && (req.max === undefined || i.rating <= req.max));
     case 'MAX_SAME': {
@@ -72,26 +87,41 @@ const itemArb = (index: number) =>
     }),
   );
 
-const clubArb = fc.integer({ min: 0, max: 45 }).chain((n) => fc.tuple(...Array.from({ length: n }, (_, i) => itemArb(i + 1))));
+const clubArb = fc.oneof({ arbitrary: fc.integer({ min: 0, max: 12 }), weight: 1 }, { arbitrary: fc.integer({ min: 20, max: 45 }), weight: 4 }).chain((n) => fc.tuple(...Array.from({ length: n }, (_, i) => itemArb(i + 1))));
+
+/** Present in ~40% of cases, so combinations stay varied but often satisfiable. */
+const sometimes = <T,>(arb: fc.Arbitrary<T>): fc.Arbitrary<T | undefined> =>
+  fc.oneof({ arbitrary: fc.constant(undefined), weight: 3 }, { arbitrary: arb, weight: 2 });
 
 const requirementsArb: fc.Arbitrary<SbcRequirement[]> = fc
   .record({
-    rating: fc.option(fc.integer({ min: 60, max: 86 }), { nil: undefined }),
-    rare: fc.option(fc.integer({ min: 1, max: 5 }), { nil: undefined }),
-    maxSame: fc.option(fc.integer({ min: 2, max: 6 }), { nil: undefined }),
-    minUnique: fc.option(fc.integer({ min: 1, max: 4 }), { nil: undefined }),
-    maxBronze: fc.option(fc.integer({ min: 0, max: 3 }), { nil: undefined }),
-    minRating: fc.option(fc.integer({ min: 55, max: 75 }), { nil: undefined }),
+    rating: sometimes(fc.integer({ min: 60, max: 86 })),
+    rare: sometimes(fc.integer({ min: 1, max: 5 })),
+    maxSame: sometimes(fc.integer({ min: 2, max: 6 })),
+    minUnique: sometimes(fc.integer({ min: 1, max: 4 })),
+    maxBronze: sometimes(fc.integer({ min: 0, max: 3 })),
+    minRating: sometimes(fc.integer({ min: 55, max: 75 })),
+    exactRare: sometimes(fc.integer({ min: 0, max: 3 })),
+    minSameLeague: sometimes(fc.integer({ min: 2, max: 6 })),
+    maxUniqueNation: sometimes(fc.integer({ min: 2, max: 4 })),
+    minQuality: sometimes(fc.constantFrom('BRONZE', 'SILVER', 'GOLD') as fc.Arbitrary<'BRONZE' | 'SILVER' | 'GOLD'>),
+    squadSize: fc.boolean(),
   })
   .map((r) => {
     const reqs: SbcRequirement[] = [];
-    if (r.rating !== undefined) reqs.push({ id: 'r-rating', type: 'MIN_SQUAD_RATING', value: r.rating });
-    if (r.rare !== undefined) reqs.push({ id: 'r-rare', type: 'MIN_COUNT', count: r.rare, filter: { rarities: ['RARE'] } });
-    if (r.maxSame !== undefined) reqs.push({ id: 'r-same', type: 'MAX_SAME', dimension: 'club', count: r.maxSame });
-    if (r.minUnique !== undefined) reqs.push({ id: 'r-unique', type: 'MIN_UNIQUE', dimension: 'league', count: r.minUnique });
-    if (r.maxBronze !== undefined) reqs.push({ id: 'r-bronze', type: 'MAX_COUNT', count: r.maxBronze, filter: { qualities: ['BRONZE'] } });
-    if (r.minRating !== undefined) reqs.push({ id: 'r-range', type: 'PLAYER_RATING_RANGE', min: r.minRating });
-    if (reqs.length === 0) reqs.push({ id: 'r-rating', type: 'MIN_SQUAD_RATING', value: 60 });
+    const via = 'fixture' as const;
+    if (r.rating !== undefined) reqs.push({ id: 'r-rating', via, type: 'MIN_SQUAD_RATING', value: r.rating });
+    if (r.rare !== undefined && r.exactRare === undefined) reqs.push({ id: 'r-rare', via, type: 'MIN_COUNT', count: r.rare, filter: { rarities: ['RARE'] } });
+    if (r.maxSame !== undefined) reqs.push({ id: 'r-same', via, type: 'MAX_SAME', dimension: 'club', count: r.maxSame });
+    if (r.minUnique !== undefined) reqs.push({ id: 'r-unique', via, type: 'MIN_UNIQUE', dimension: 'league', count: r.minUnique });
+    if (r.maxBronze !== undefined) reqs.push({ id: 'r-bronze', via, type: 'MAX_COUNT', count: r.maxBronze, filter: { qualities: ['BRONZE'] } });
+    if (r.minRating !== undefined) reqs.push({ id: 'r-range', via, type: 'PLAYER_RATING_RANGE', min: r.minRating });
+    if (r.exactRare !== undefined) reqs.push({ id: 'r-exact', via, type: 'EXACT_COUNT', count: r.exactRare, filter: { rarities: ['RARE'] } });
+    if (r.minSameLeague !== undefined) reqs.push({ id: 'r-minsame', via, type: 'MIN_SAME', dimension: 'league', count: r.minSameLeague });
+    if (r.maxUniqueNation !== undefined) reqs.push({ id: 'r-maxuniq', via, type: 'MAX_UNIQUE', dimension: 'nation', count: r.maxUniqueNation });
+    if (r.minQuality !== undefined) reqs.push({ id: 'r-quality', via, type: 'PLAYER_QUALITY', min: r.minQuality });
+    if (r.squadSize) reqs.push({ id: 'r-size', via, type: 'SQUAD_SIZE', count: 11 });
+    if (reqs.length === 0) reqs.push({ id: 'r-rating', via, type: 'MIN_SQUAD_RATING', value: 60 });
     return reqs;
   });
 
@@ -99,20 +129,28 @@ const strategyArb = fc.constantFrom<SolverStrategy>('DUPLICATES_FIRST', 'MINIMUM
 
 describe('solver invariants (property-based)', () => {
   it('every SOLVED result satisfies all requirements and respects protection, locks and eligibility', () => {
+    let solved = 0;
     fc.assert(
       fc.property(clubArb, requirementsArb, strategyArb, fc.integer({ min: 0, max: 1_000 }), (club, requirements, strategy, seed) => {
         const eligible = club.filter((i) => i.location !== 'TRANSFER_LIST');
         const protectedIds = eligible.filter((_, i) => (i + seed) % 7 === 0).map((i) => i.id);
-        const lockCandidate = eligible.find((i) => !protectedIds.includes(i.id) && requirements.every((r) => r.type !== 'PLAYER_RATING_RANGE' || i.rating >= (r.min ?? 0)));
+        const lockCandidate = eligible.find(
+          (i) =>
+            !protectedIds.includes(i.id) &&
+            requirements.every((r) => (r.type !== 'PLAYER_RATING_RANGE' && r.type !== 'PLAYER_QUALITY') || independentlySatisfied(r, [i], 11)),
+        );
         const lockedIds = lockCandidate && seed % 2 === 0 ? [lockCandidate.id] : [];
         const size = 11;
         const problem = makeProblem({ challengeId: 'prop', squadSize: size, requirements }, club, { strategy, protectedItemIds: protectedIds, lockedItemIds: lockedIds });
+        // Every result, whatever its status, must satisfy the output contract.
+        expect(SolveResultSchema.safeParse(solveLocally(problem, { now: () => 0 })).success).toBe(true);
         const result = solveLocally(problem, { now: () => 0 });
 
         // Determinism
         expect(solveLocally(problem, { now: () => 0 })).toEqual(result);
 
         if (result.status !== 'SOLVED') return;
+        solved += 1;
         const byId = new Map(club.map((i) => [i.id, i]));
         const squad = result.selected.map((s) => byId.get(s.itemId)).filter((i): i is ClubItem => i !== undefined);
         expect(squad).toHaveLength(size);
@@ -125,7 +163,29 @@ describe('solver invariants (property-based)', () => {
         for (const id of lockedIds) expect(squad.map((i) => i.id)).toContain(id);
         for (const req of requirements) expect(independentlySatisfied(req, squad, size)).toBe(true);
       }),
-      { numRuns: 300, seed: 42 },
+      { numRuns: 400, seed: 42 },
+    );
+    // Guard against a vacuous property: enough generated cases must actually be solved.
+    expect(solved).toBeGreaterThan(40);
+  });
+});
+
+describe('fail-closed invariant (property-based)', () => {
+  it('any challenge containing an unverifiable requirement is never SOLVED', () => {
+    const unverifiable = fc.constantFrom<SbcRequirement>(
+      { id: 'u-chem', via: 'fixture', type: 'MIN_CHEMISTRY', value: 10 },
+      { id: 'u-totw', via: 'fixture', type: 'MIN_COUNT', count: 1, filter: { programs: ['TOTW'] } },
+      { id: 'u-tots', via: 'fixture', type: 'MAX_COUNT', count: 3, filter: { programs: ['TOTS'] } },
+      { id: 'u-unknown', type: 'UNKNOWN', reason: 'UNRECOGNIZED_TEXT', structuralFingerprint: '12345678', rawSafeDescription: null },
+    );
+    fc.assert(
+      fc.property(clubArb, requirementsArb, unverifiable, (club, requirements, extra) => {
+        const result = solveLocally(makeProblem({ challengeId: 'u', squadSize: 11, requirements: [...requirements, extra] }, club), { now: () => 0 });
+        expect(result.status).not.toBe('SOLVED');
+        expect(result.status).toBe('UNSUPPORTED');
+        expect(result.selected).toEqual([]);
+      }),
+      { numRuns: 150, seed: 7 },
     );
   });
 });

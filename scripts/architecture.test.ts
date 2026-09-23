@@ -74,11 +74,54 @@ describe('architecture boundaries', () => {
   });
 
   it('EA selectors live only in ea-adapter profiles', () => {
+    const profilesDir = join(root, 'packages', 'ea-adapter', 'src', 'profiles');
     const offenders = ['apps', 'packages']
       .flatMap((top) => readdirSync(join(root, top)).map((d) => join(root, top, d)))
-      .filter((dir) => !dir.endsWith(join('packages', 'ea-adapter')))
       .flatMap((dir) => (statSync(dir).isDirectory() ? sourceFiles(dir) : []))
+      .filter((f) => !f.startsWith(profilesDir))
       .filter((f) => /['"`]\.ut-[a-z]/.test(code(f)));
     expect(offenders.map((f) => relative(root, f))).toEqual([]);
+  });
+
+  it('localized UI text lives only in the interpretation dictionaries', async () => {
+    const { en, de, fr, es } = await import('@fc/ea-adapter');
+    const phrases = [en, de, fr, es]
+      .flatMap((d) => Object.values(d.subjects).flat())
+      .filter((p) => p.includes(' ') && p.length >= 8);
+    const adapterSrc = join(root, 'packages', 'ea-adapter', 'src');
+    const dictionaries = join(adapterSrc, 'interpretation', 'dictionaries');
+    // Scope: everything that reads EA (the adapter) plus the content script.
+    // Our own English product copy in @fc/ui is not EA-text interpretation.
+    const candidates = [...sourceFiles(adapterSrc), ...sourceFiles(join(root, 'apps', 'extension', 'entrypoints', 'ea.content'))].filter(
+      (f) => !f.startsWith(dictionaries),
+    );
+    // Only string literals count: identifiers such as MIN_SQUAD_RATING are code, not UI text.
+    const literals = (source: string) => [...source.matchAll(/(['"`])((?:\\.|(?!\1)[^\\\n])*)\1/g)].map((m) => m[2] ?? '');
+    const offenders = candidates.filter((f) =>
+      literals(code(f)).filter((lit) => !/^[A-Z0-9_:]+$/.test(lit) && !/^[a-z0-9]+(-[a-z0-9]+)+$/.test(lit)).some((lit) => {
+        const text = ` ${lit.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim()} `;
+        return phrases.some((p) => text.includes(` ${p} `));
+      }),
+    );
+    expect(offenders.map((f) => relative(root, f))).toEqual([]);
+    const importers = sourceFiles(adapterSrc).filter((f) => !f.startsWith(join(adapterSrc, 'interpretation')) && importsOf(f).some((i) => i.includes('dictionaries')));
+    expect(importers.map((f) => relative(root, f))).toEqual([]);
+  });
+
+  it('inspection mode is reachable only from development builds of the content script', () => {
+    const content = code(join(root, 'apps', 'extension', 'entrypoints', 'ea.content', 'index.tsx'));
+    const inspectCall = content.indexOf('inspectCurrentScreen({');
+    const devGuard = content.indexOf('if (import.meta.env.DEV) {');
+    expect(inspectCall).toBeGreaterThan(-1);
+    expect(devGuard).toBeGreaterThan(-1);
+    expect(devGuard).toBeLessThan(inspectCall);
+  });
+
+  it('extension permissions stay minimal', async () => {
+    const config = code(join(root, 'apps', 'extension', 'wxt.config.ts'));
+    expect(config).toMatch(/permissions: \['storage', 'sidePanel'\]/);
+    expect(config).not.toMatch(/host_permissions|<all_urls>|'tabs'|'scripting'|'cookies'|'webRequest'/);
+    const { contentScriptMatches } = await import('../apps/extension/src/config/hosts.js');
+    for (const m of contentScriptMatches('production')) expect(m).toMatch(/^https:\/\/www\.ea\.com\/(\*\/)?ea-sports-fc\/ultimate-team\/web-app\/\*$/);
   });
 });

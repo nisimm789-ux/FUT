@@ -3,41 +3,82 @@ import type { EaContextKind } from '@fc/contracts';
 export type KnownContext = Exclude<EaContextKind, 'UNKNOWN'>;
 
 /**
- * A selector profile is the ONLY place that knows EA page structure.
+ * One way of recognising a context. Signals are scored and summed:
+ *   view (+requires) = 3   structural marker of the mounted view (strongest)
+ *   activeNav        = 2   selected navigation item (language-neutral icon class)
+ *   route            = 1   URL path/hash pattern (weak: the Web App is an SPA)
+ * `high` confidence requires the structural view signal.
+ */
+export interface ContextRule {
+  readonly kind: KnownContext;
+  readonly view?: string;
+  /** Extra structure that must ALSO exist for `view` to count (disambiguation). */
+  readonly requires?: string;
+  readonly activeNav?: string;
+  readonly route?: RegExp;
+}
+
+export const SIGNAL_WEIGHTS = { view: 3, activeNav: 2, route: 1 } as const;
+
+/**
+ * An EA adapter profile is the ONLY place that knows EA page structure.
  * When EA ships a UI change we add/replace a profile, not edit readers or UI.
  *
  * Rules:
  * - Prefer structural signals (class names, attributes, element nesting,
  *   numeric text, asset URL ids) over visible text; users run the Web App
- *   in many languages.
- * - Readers that a profile cannot support are simply left undefined; the
- *   adapter then reports the capability as `unsupported`.
+ *   in many languages. Text interpretation lives only in /interpretation.
+ * - Readers a profile cannot support are left undefined; the adapter then
+ *   reports the capability as `unsupported`.
  */
-export interface SelectorProfile {
+export interface EaAdapterProfile {
   readonly id: string;
-  /** False until the profile has been validated against the live Web App. */
+  readonly fcVersion: 'SYNTHETIC' | 'FC27';
+  readonly profileVersion: string;
+  /** False until validated against the live Web App (shown in health + UI). */
   readonly verified: boolean;
+  /** Targets the real EA Web App. Combined with an origin check to decide provenance. */
+  readonly live: boolean;
   /** Returns true if the document looks like the app shell this profile targets. */
   probe(doc: Document): boolean;
-  /** Selector for the mounted view of each context, checked in the listed order. */
-  readonly contextViews: readonly (readonly [KnownContext, string])[];
-  /** Weak URL/hash hints, used only when no view structure matches. */
-  readonly urlHints: readonly (readonly [KnownContext, RegExp])[];
-  readonly sbc?: SbcSelectors;
+  readonly contextRules: readonly ContextRule[];
+  /** Navigation items, used by inspection mode to describe the shell. */
+  readonly navigation?: { item: string; selectedClass: string };
+  readonly sbc?: SbcProfile;
   readonly club?: ClubSelectors;
 }
 
-export interface SbcSelectors {
-  challengeRoot: string;
-  challengeName: string;
-  requirement: string;
-  attrs: {
-    challengeId: string;
-    setId: string;
-    squadSize: string;
-    requirementId: string;
-    requirementKind: string;
+/** @deprecated Phase 0 name, kept for compatibility. */
+export type SelectorProfile = EaAdapterProfile;
+
+export interface AssetIdPatterns {
+  nation: RegExp;
+  league: RegExp;
+  club: RegExp;
+}
+
+export interface SbcProfile {
+  /** Document-level selector of the requirements container (observation scope #1). */
+  requirementsRoot: string;
+  /** Requirement rows, relative to requirementsRoot. */
+  requirementRow: string;
+  /** Any of these classes on a row marks it as currently met in EA's UI. */
+  completedClasses: readonly string[];
+  /** Document-level selector of the squad pitch (observation scope #2). */
+  pitchRoot?: string;
+  /** Slots relative to pitchRoot; `filled`/`locked` are matched on or inside the slot. */
+  slots?: { slot: string; filled: string; locked?: string };
+  /** Document-level selector for the challenge title (display only). */
+  name?: string;
+  /** Explicit structural encodings, when the page provides them (fixtures). */
+  structural?: {
+    challengeIdAttr: string;
+    setIdAttr: string;
+    squadSizeAttr: string;
+    requirementIdAttr: string;
+    requirementKindAttr: string;
   };
+  assetIdPatterns: AssetIdPatterns;
 }
 
 export interface ClubSelectors {

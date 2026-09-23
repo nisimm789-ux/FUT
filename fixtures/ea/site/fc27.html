@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FC 27 candidate structure - synthetic dev fixture</title>
+<link rel="stylesheet" href="./fixture.css">
+<style>
+  .fixture-controls { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 16px; background: #222a3a; }
+  .fixture-controls button, .fixture-controls select { background: #2a3448; color: #e8ecf3; border: 0; border-radius: 6px; padding: 5px 9px; cursor: pointer; }
+  .ut-tab-bar-item { width: 44px; height: 28px; background: #2a3448; border: 0; border-radius: 6px; margin: 4px; }
+  .ut-tab-bar-item.selected { background: #4b6cff; }
+  .ut-squad-pitch-view { display: grid; grid-template-columns: repeat(6, 60px); gap: 6px; margin: 12px 0; }
+  .ut-squad-slot-view { height: 60px; background: #1f2738; border-radius: 6px; display: grid; place-items: center; }
+  .ut-squad-slot-view.locked { opacity: .3; }
+  .ut-sbc-challenge-requirements-row.complete { color: #6ee7a0; }
+</style>
+</head>
+<body>
+<div class="fixture-banner">Synthetic dev fixture modelling the CANDIDATE fc27-live structure. Not EA. Served from localhost, so data is labelled LOCAL_FIXTURE, never live.</div>
+<div class="fixture-controls" id="controls">
+  <select id="page" aria-label="screen"></select>
+  <button id="fill">Fill next slot</button>
+  <button id="toggle">Toggle 1st requirement complete</button>
+  <button id="rating">Bump team-rating value</button>
+  <button id="noise">Animate unrelated DOM (x50)</button>
+  <button id="rerender">Re-render view (same state)</button>
+  <button id="remove">Remove requirements container</button>
+</div>
+<div id="app"></div>
+<script type="module">
+  // SPA emulation: the document never reloads. Screen swaps replace the app
+  // subtree; the controls mutate the CURRENT screen in place so same-page
+  // observation, fingerprinting and debouncing can be exercised by hand.
+  const pages = ['sbc-challenge.en', 'sbc-challenge.de', 'sbc-challenge.fr', 'sbc-challenge.es', 'sbc-challenge-supported.en',
+    'sbc-challenge-unknown.en', 'sbc-challenge-seven.en', 'sbc-challenge-no-requirements', 'sbc-hub', 'home', 'squads', 'store',
+    'pack-results', 'transfers', 'club', 'evolutions', 'unknown'];
+  const select = document.getElementById('page');
+  for (const p of pages) select.append(new Option(p, p));
+  const app = document.getElementById('app');
+  const parser = new DOMParser();
+  async function show(page) {
+    const doc = parser.parseFromString(await (await fetch(`../fc27/${page}.html`)).text(), 'text/html');
+    document.documentElement.lang = doc.documentElement.getAttribute('lang') ?? '';
+    const root = doc.querySelector('.ut-root-view');
+    app.replaceChildren(document.importNode(root, true));
+    select.value = page;
+    if (location.hash !== `#/${page}`) history.pushState(null, '', `#/${page}`);
+  }
+  select.addEventListener('change', () => show(select.value));
+  document.getElementById('fill').onclick = () => {
+    const empty = app.querySelector('.ut-squad-slot-view:not(.locked) .ut-item-view.empty');
+    if (empty) { empty.classList.remove('empty'); empty.classList.add('player'); empty.innerHTML = '<span class="rating">80</span>'; }
+  };
+  document.getElementById('toggle').onclick = () => app.querySelector('.ut-sbc-challenge-requirements-row')?.classList.toggle('complete');
+  document.getElementById('rating').onclick = () => {
+    const label = app.querySelector('.ut-sbc-challenge-requirements-row .ut-requirement-label');
+    if (label) label.textContent = label.textContent.replace(/\d+/, (n) => String(Number(n) + 1));
+  };
+  document.getElementById('noise').onclick = () => {
+    let i = 0;
+    const tick = () => { const d = document.createElement('div'); d.className = 'noise'; app.querySelector('.ut-content')?.append(d); d.remove(); if (++i < 50) requestAnimationFrame(tick); };
+    tick();
+  };
+  document.getElementById('rerender').onclick = () => {
+    const view = app.querySelector('.ut-sbc-challenge-requirements-view');
+    if (view) view.replaceWith(view.cloneNode(true));
+  };
+  document.getElementById('remove').onclick = () => app.querySelector('.ut-sbc-challenge-requirements-view')?.remove();
+  window.addEventListener('popstate', () => show(location.hash.replace('#/', '') || 'sbc-challenge.en'));
+  show(location.hash.replace('#/', '') || 'sbc-challenge.en');
+</script>
+</body>
+</html>

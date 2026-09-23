@@ -8,3 +8,4 @@ button:hover { background: #33405a; }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 pre { font-size: 11px; background: #0a0d13; padding: 8px; border-radius: 6px; overflow: auto; max-height: 320px; }
 details summary { cursor: pointer; color: var(--fca-muted); }
+.fca-live-banner { background: #173d2a; color: #6ee7a0; padding: 4px 8px; border-radius: 6px; font-weight: 700; margin: 0 0 12px; }

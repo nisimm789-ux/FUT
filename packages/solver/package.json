@@ -17,5 +17,6 @@
   },
   "devDependencies": {
     "@fc/ea-fixtures": "workspace:*"
-  }
+  },
+  "sideEffects": false
 }

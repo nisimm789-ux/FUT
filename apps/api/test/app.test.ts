@@ -24,9 +24,10 @@ describe('api', () => {
       method: 'POST',
       url: '/v1/solve',
       payload: {
-        schemaVersion: 1,
+        schemaVersion: 2,
         challenge: loadSbcFixture(),
         candidates: loadClubFixture().items,
+        candidatesProvenance: 'LOCAL_FIXTURE',
         options: { strategy: 'BALANCED', protectedItemIds: [], lockedItemIds: [], maxAdditionalCoins: 0 },
       },
     });

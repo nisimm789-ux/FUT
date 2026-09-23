@@ -12,5 +12,6 @@
   },
   "dependencies": {
     "@fc/contracts": "workspace:*"
-  }
+  },
+  "sideEffects": false
 }

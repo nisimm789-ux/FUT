@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "coverage": "complete",
   "items": [
     {
@@ -675,6 +675,6 @@
       "estimatedPrice": null
     }
   ],
-  "source": "fixture",
+  "provenance": "LOCAL_FIXTURE",
   "observedAt": 0
 }

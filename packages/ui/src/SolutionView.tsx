@@ -1,4 +1,5 @@
 import type { ClubItem, SolveResult } from '@fc/contracts';
+import { ProvenanceBadge } from './Badges.js';
 
 export interface SolutionViewProps {
   result: SolveResult;
@@ -10,6 +11,14 @@ export function SolutionView({ result, items }: SolutionViewProps) {
   return (
     <section className="fca-card" aria-label="Solver result">
       <h2>Solution preview</h2>
+      {(result.inputProvenance.challenge !== 'EA_WEB_LIVE' || result.inputProvenance.candidates !== 'EA_WEB_LIVE') && (
+        <p className="fca-demo-banner" data-testid="non-live-banner">
+          Demo on non-live data — not a recommendation for your club.
+        </p>
+      )}
+      <p className="fca-muted">
+        Challenge <ProvenanceBadge provenance={result.inputProvenance.challenge} /> · Club <ProvenanceBadge provenance={result.inputProvenance.candidates} />
+      </p>
       <dl className="fca-kv">
         <dt>Status</dt>
         <dd className={`fca-status-${result.status}`} data-testid="solve-status">{result.status}</dd>

@@ -4,8 +4,10 @@ An intelligence and tooling layer for the **EA SPORTS FC Ultimate Team Web App**
 delivered as a Manifest V3 browser extension. The EA Web App stays the primary UI.
 We add a small in-page **⚡ Assistant** button and a Chrome **side panel**.
 
-> **Phase 0: read-only foundation.** No EA write action exists. We never
-> touch EA passwords, 2FA codes, cookies or session tokens.
+> **Phase 1A: read-only live SBC reading.** No EA write action exists. We never
+> touch EA passwords, 2FA codes, cookies or session tokens. The FC 27 live
+> profile is a candidate (`verified: false`) until confirmed with sanitized
+> inspection reports from real sessions (docs/architecture.md §13–§18).
 
 - Architecture: [`docs/architecture.md`](docs/architecture.md)
 - Decisions: [`docs/adr/`](docs/adr)
@@ -28,6 +30,8 @@ pnpm check                 # typecheck + lint + tests + production extension bui
 | `pnpm dev:extension` | WXT dev mode with hot reload |
 | `pnpm fixtures:serve` | Synthetic EA-like SPA at http://localhost:4173/site/ |
 | `pnpm smoke:extension` | Loads the dev build into Chromium and drives the fixture (needs a Playwright Chromium, or set `CHROMIUM_PATH`) |
+| `pnpm fixtures:from-report <report.json> <name>` | Convert a sanitized live inspection report into `fixtures/ea/captured/<name>.html` |
+| `pnpm fixtures:generate` | Regenerate synthetic fixtures + golden data |
 | `pnpm dev:api` | Fastify API on http://127.0.0.1:8787 (`/health`, `/v1/config`, `POST /v1/solve`) |
 
 ## Try it against the local fixture

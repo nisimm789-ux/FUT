@@ -1,11 +1,13 @@
-# FC Assistant — Architecture (Phase 0)
+# FC Assistant — Architecture (Phase 1A)
 
 FC Assistant is an **intelligence and tooling layer that runs alongside the EA
 SPORTS FC Web App**, delivered as a browser extension. The EA Web App remains the
 primary UI. We add a tiny in-page control and a Chrome side panel; we do not
 rebuild EA's UI.
 
-Phase 0 is a **read-only** proof of concept. It establishes boundaries that must
+Phase 0 established a **read-only** foundation. Phase 1A connects the adapter
+to the real FC 27 Web App for context detection and SBC-challenge reading
+(§13–§18). Still read-only: no write actions, no auto-complete. It establishes boundaries that must
 survive the product growing into SBC solving, set optimisation, club intelligence,
 evolutions, market analytics, an AI copilot and (much later, user-triggered)
 actions.
@@ -190,10 +192,7 @@ EA compatibility is the highest-risk area, so it is isolated:
   that knows EA structure. Readers take selectors as input. A UI change on EA's
   side means adding a new profile, not editing React or the solver.
 - Profiles are probed per document (`probe()`), and the most specific one wins.
-  `synthetic-v1` drives dev and CI. `ea-web-candidate-0` is an **unverified**
-  live guess that only attempts context detection; its readers are
-  intentionally undefined, so SBC and club reading report `unsupported` on the
-  live site until validated.
+  `synthetic-v1` drives dev and CI; `fc27-live` is the FC 27 live profile (§13).
 - Structural signals come first: view class names, data attributes, numeric
   text and **numeric ids from asset URLs** (flags, leagues, clubs, player
   portraits). Localized text is never used for meaning. The fixtures are in
@@ -210,13 +209,12 @@ EA compatibility is the highest-risk area, so it is isolated:
 - `ADAPTER_VERSION` (semver) + `AdapterCapabilities` let config and telemetry
   reason about which build supports what.
 
-### Live validation backlog
+### Live validation backlog (Phase 0 list; see §18 for the current state)
 
-Items that must be verified against a real, logged-in EA Web App session
-before Phase 1 readers ship:
+Items that must be verified against a real, logged-in EA Web App session:
 
 1. Content-script match patterns cover every locale path variant EA uses.
-2. The app shell probe and view container class names in `ea-web-candidate-0`.
+2. The app shell probe and view container class names (now in `fc27-live`).
 3. Whether SPA navigations change the URL/hash at all, or only the DOM.
 4. How SBC requirements are represented structurally. If the DOM only exposes
    localized text, a MAIN-world read bridge to EA's view models may be
@@ -260,3 +258,191 @@ fixtures/ea          synthetic pages, golden JSON, dev SPA + server
 docs/                architecture + ADRs
 scripts/             architecture boundary test, extension smoke test
 ```
+
+
+---
+
+# Phase 1A — reading the live FC 27 Web App
+
+## 13. Live EA adapter strategy
+
+**Hosts.** FC 27 is served at `https://www.ea.com/ea-sports-fc/ultimate-team/web-app/`
+(locale variants `https://www.ea.com/<locale>/ea-sports-fc/…/web-app/`). The
+production manifest matches exactly those two patterns, **excludes
+`https://www.ea.com/games/*`** (EA's marketing page for the app, which the
+locale wildcard would otherwise match), and still needs **no
+`host_permissions`**: static content scripts are injected via `matches`, and
+the extension performs no network requests. Permissions remain
+`storage` + `sidePanel`. The in-page launcher mounts only after a profile's
+`probe()` recognises the app shell, so login/error/marketing pages on matched
+paths get nothing injected.
+
+**Profiles.** `EaAdapterProfile` = `id`, `fcVersion`, `profileVersion`,
+`verified`, `live`, `probe()`, `contextRules`, `navigation`, `sbc`, `club`.
+All selectors/signatures live in `packages/ea-adapter/src/profiles/`
+(enforced: `.ut-*` selector literals anywhere else fail the architecture test).
+
+`fc27-live` (profileVersion 0.1.0) is a **candidate** built on EA's
+long-standing `UT<Name>View → .ut-<name>-view` convention. It is
+`verified: false` because this development environment could not reach or log
+in to ea.com. `verified` is surfaced in `AdapterHealth.profileVerified`, in
+every snapshot's `adapter` block and as an "UNVERIFIED PROFILE" badge. A test
+forbids flipping it to `true` until captured fixtures from real sessions exist.
+
+**Capabilities reported on FC 27:**
+
+| capability | state |
+|---|---|
+| contextDetection | healthy once the shell is recognised |
+| sbcReading | unknown → healthy / degraded (fails closed) |
+| clubReading, squadReading, packReading, evolutionReading | unsupported (Phase 1B+) |
+| actions | disabled (always) |
+
+**Context detection** is multi-signal and scored per rule: structural view
+(+requires) = 3, selected tab-bar icon = 2, route = 1. `high` confidence
+requires structure. Each tab icon is attached to exactly one rule (the tab's
+hub), so a navigation-only match can never be mistaken for a sub-screen such
+as SBC_CHALLENGE or PACK_RESULTS. No rule uses visible text; tests scramble
+every text node and change `lang` and expect identical results.
+
+## 14. Requirement parser (text interpretation layer)
+
+EA renders SBC requirements as localized text. Where structure exists (asset
+ids for nations/leagues/clubs, completion classes, slot structure) it is used
+first; meaning from text is confined to `packages/ea-adapter/src/interpretation/`:
+
+```
+reader (DOM) ──RequirementEvidence{text, assetIds}──► interpreter ──► KnownRequirement | UNKNOWN
+                                                        ▲
+                                  dictionaries/{en,de,fr,es}.ts  (data only, replaceable)
+```
+
+- Dictionaries map normalized phrases (lowercase, no diacritics, no
+  punctuation) to language-independent *subjects* (TEAM_RATING, CHEMISTRY,
+  SAME_CLUB, UNIQUE_LEAGUES, TOTW, FROM_NATION…) and operators (min/max/exact).
+  They are marked `verified: false` until wording is confirmed live.
+- Preferred language = `<html lang>`. If it is missing and dictionaries
+  disagree, the result is `UNKNOWN(AMBIGUOUS_LANGUAGE)`, never a guess.
+- Longest phrase wins; equal-length conflicts → `UNKNOWN(AMBIGUOUS_TEXT)`.
+  An `OTHER` subject lists known-but-unmodelled concepts (per-player
+  chemistry, loyalty, first owner…) so "Min. 2 Chemistry Points per Player"
+  can never be misread as total chemistry.
+- Named entities (a specific nation/league/club) are never mapped from names —
+  only from ids in asset URLs; otherwise `UNKNOWN(ENTITY_ID_UNAVAILABLE)`.
+- Architecture test: no dictionary phrase may appear as a string literal in the
+  adapter outside `interpretation/dictionaries/`, and only `interpretation/`
+  may import the dictionaries.
+
+**Contract model (v2).** Known: `MIN_SQUAD_RATING`, `MIN_CHEMISTRY`,
+`SQUAD_SIZE`, `MIN_COUNT` / `MAX_COUNT` / `EXACT_COUNT` (filter: rarity,
+quality, programme such as TOTW/TOTS/IN_FORM, nation/league/club ids, rating
+bounds), `PLAYER_RATING_RANGE`, `PLAYER_QUALITY`, `MAX_SAME`, `MIN_SAME`,
+`MIN_UNIQUE`, `MAX_UNIQUE`. Unknown: `UNKNOWN { reason, structuralFingerprint
+(values masked), rawSafeDescription (sanitized ≤120) }`. Every known
+requirement records `via: structure | text | fixture`.
+
+**Fail closed.** `requirementSupport()` (domain) is the single rule for what
+can be *verified*: `UNKNOWN`, `MIN_CHEMISTRY` (needs positions) and any
+programme filter (club items carry no programme data yet) are unsupported, and
+any unsupported requirement makes the solver return `UNSUPPORTED` with no
+squad. A property test asserts that no challenge containing one is ever SOLVED.
+
+## 15. SBC snapshot
+
+`SbcChallengeSnapshot` v2 adds `challengeIdKind` (`EA | LOCAL_FINGERPRINT |
+FIXTURE`; the DOM exposes no challenge id, so live snapshots get a stable
+`local-xxxxxxxx` from name + squad size + requirement text, which ignores slot
+changes), `filledSlots`, `interpretationLocale`, `provenance`, and
+`adapter {adapterVersion, profileId, profileVerified}`. Squad size comes from
+explicit structure, else the "players in squad" requirement, else the count of
+non-locked pitch slots; otherwise the read fails with `FIELD_MISSING`.
+
+## 16. Observation and fingerprinting
+
+```
+root MutationObserver (childList only)  ─► debounce 150ms / max-wait 1s ─► detect context (~1ms)
+      └─ context changed? ─► dispose scoped observer ─► bind new scope ─► read that context once
+scoped MutationObserver (only the SBC requirements + pitch subtrees; childList, class/src, text)
+      ─► debounce 120ms / max-wait 1s ─► fingerprint (~1ms) ─► changed? ─► re-read ─► identical? suppress
+```
+
+- Nothing re-parses the whole document per mutation; the solver never runs from
+  observation (only on an explicit click).
+- EA re-renders that replace the scoped nodes are detected on the next root
+  tick and the scoped observer is re-bound; the fingerprint prevents a re-read
+  if the state is the same.
+- Max-wait bounds latency under continuous animation.
+- Perf (`AdapterPerf`, numbers only, shown in the dev section and carried in
+  tab state): detectContext, readSbc, fingerprint, mutationToRefresh timings;
+  counters for mutation batches, ticks, unchanged fingerprints, re-reads and
+  suppressed duplicates. The side panel shows its own update latency.
+  Measured in Chromium on the fixture: detect 0.2–1.5 ms, fingerprint ≈1 ms,
+  SBC read 2.5–6 ms, mutation→refresh ≈160 ms (dominated by the debounce).
+
+**Stale data.** Tab state holds `{snapshot, freshness, staleReason, lastReadAt}`.
+Leaving the context → `CONTEXT_LEFT`; a failed re-read → `READ_FAILED` (the old
+snapshot is kept, never replaced by a fabricated one); SAFE_MODE →
+`READS_DISABLED`. The UI shows a STALE badge with the reason.
+
+## 17. Provenance
+
+Every snapshot and solve input carries `provenance`:
+`EA_WEB_LIVE | LOCAL_FIXTURE | IMPORTED_FIXTURE | MANUAL`. `EA_WEB_LIVE`
+requires **both** a `live` profile **and** the real EA origin
+(`https://www.ea.com`), so an FC 27-shaped fixture on localhost is
+`LOCAL_FIXTURE`. `SolveProblem.candidatesProvenance` and
+`SolveResult.inputProvenance` carry it through solving; the UI shows badges,
+renders non-live cards hatched with a "not live" note, and prefixes any result
+on non-live input with "Demo on non-live data".
+
+## 18. Inspection mode and sanitized fixture workflow
+
+**Development builds only** (the production content script compiles the branch
+out and answers `DISABLED_IN_PRODUCTION`). Side panel → Developer →
+**Inspect Current EA Screen** → summary + **Export Sanitized Inspection Report**.
+
+The report (`InspectionReportSchema`, every object `.strict()`) contains:
+origin, sanitized path/route (id-like segments → `:id`), query *keys*, `lang`,
+detected context and per-rule scores, `ut-*-view` class counts, tab-bar icon
+classes + selected state, landmark counts, the SBC requirements subtree as a
+structural tree (tags, `ut-*`/state classes, `data-*` *names*, asset kinds),
+requirement rows with sanitized text, fingerprints and what the interpreter
+made of them, slot counts, heuristic requirement-list candidates (for when the
+profile misses), reader diagnostics, health, recent validation failures and
+perf. It never reads cookies, web storage, network data, input/textarea
+values or contenteditable content; text is captured **only** inside
+requirement rows and is sanitized (emails, URLs, long tokens, ≥6-digit
+numbers). The report is scanned by `findSensitiveContent()` and **blocked** if
+anything suspicious survives. It is deterministic apart from `meta.generatedAt`.
+
+Fixture workflow:
+
+```
+live FC 27 (dev build) → Export report.json → pnpm fixtures:from-report report.json <name>
+  → fixtures/ea/captured/<name>.html (minimal skeleton, re-scanned)
+  → author <name>.expect.json {context, requirementTypes, squadSize}
+  → packages/ea-adapter/test/captured-fixtures.test.ts runs it in CI
+```
+
+`scripts/fixture-sanitization.test.ts` fails CI if any file under `fixtures/`
+matches a sensitive pattern (emails, JWTs, bearer tokens, EA auth header /
+cookie names, credential keywords, account-id keys, long hex/base64 blobs,
+input values, password fields, storage access, `<script>` outside the dev site).
+
+### Known FC 27 uncertainties (need live evidence)
+
+1. Every `fc27-live` selector: shell probe, view classes, tab-bar icon classes,
+   `.ut-sbc-challenge-requirements-view` rows, completion classes, pitch/slot
+   and filled/locked markers, challenge title location.
+2. Whether `<html lang>` reflects the Web App language.
+3. Exact requirement wording per language (dictionaries are candidates).
+4. Whether requirement rows expose nation/league/club badges with numeric ids
+   in their image URLs, and the URL shape.
+5. Whether the DOM exposes any stable challenge/set id (currently local fingerprint).
+6. Whether SBCs with fewer than 11 players lock or remove pitch slots.
+7. Whether some requirement data exists only in EA's JS view models. If so,
+   the only acceptable route is a separately reviewed, read-only MAIN-world
+   bridge (ADR-006 lists the conditions); it is **not** implemented.
+8. `chrome.sidePanel.open()` from the in-page button keeping the user gesture
+   (the toolbar icon is the guaranteed fallback).
+9. The squad-rating formula against real EA values.

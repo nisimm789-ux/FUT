@@ -1,22 +1,27 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createMemoryKeyValueStore } from '@fc/domain';
+import { createPerfTracker } from '@fc/ea-adapter';
 import { handleContentMessage } from '../src/background/handler.js';
 import { contentScriptMatches } from '../src/config/hosts.js';
 import { tabStateKey } from '../src/messaging/messages.js';
 
 const validState = {
-  context: { schemaVersion: 1, kind: 'HOME', confidence: 'high', signals: ['view:home'], profileId: 'synthetic-v1', observedAt: 1 },
+  context: { schemaVersion: 2, kind: 'HOME', confidence: 'high', signals: ['view:home'], profileId: 'synthetic-v1', observedAt: 1 },
   health: {
-    schemaVersion: 1,
-    adapterVersion: '0.1.0',
+    schemaVersion: 2,
+    adapterVersion: '0.2.0',
     profileId: 'synthetic-v1',
+    profileVerified: true,
     safeMode: false,
     capabilities: { contextDetection: 'healthy', sbcReading: 'unknown', clubReading: 'unknown', squadReading: 'unsupported', packReading: 'unsupported', evolutionReading: 'unsupported', actions: 'disabled' },
     lastFailure: null,
+    recentFailures: [],
     updatedAt: 1,
   },
   sbc: null,
   club: null,
+  lastReadError: null,
+  perf: createPerfTracker(() => 0).snapshot(),
   updatedAt: 1,
 };
 
@@ -56,6 +61,11 @@ describe('host configuration', () => {
     const matches = contentScriptMatches('production');
     expect(matches.every((m) => m.startsWith('https://www.ea.com/') && m.includes('/ea-sports-fc/ultimate-team/web-app/'))).toBe(true);
     expect(matches).not.toContain('<all_urls>');
+  });
+
+  it('the marketing page under /games/ is excluded', async () => {
+    const { EA_WEB_APP_EXCLUDES } = await import('../src/config/hosts.js');
+    expect(EA_WEB_APP_EXCLUDES).toEqual(['https://www.ea.com/games/*']);
   });
 
   it('development additionally matches the local fixture host', () => {

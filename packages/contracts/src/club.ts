@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { CONTRACTS_VERSION } from './version.js';
 import { CatalogRefSchema, CoinsSchema, EpochMsSchema, IdSchema, RatingSchema } from './primitives.js';
+import { ProvenanceSchema } from './provenance.js';
 
 export const RaritySchema = z.enum(['COMMON', 'RARE', 'SPECIAL']);
 export type Rarity = z.infer<typeof RaritySchema>;
@@ -41,7 +42,7 @@ export const ClubSnapshotSchema = z.object({
   /** `complete` only if the source guarantees the whole club was read. */
   coverage: z.enum(['complete', 'partial']),
   items: z.array(ClubItemSchema).max(20_000),
-  source: z.enum(['ea-web', 'fixture', 'import']),
+  provenance: ProvenanceSchema,
   observedAt: EpochMsSchema,
 }).superRefine((snapshot, ctx) => {
   const seen = new Set<string>();
@@ -54,6 +55,8 @@ export const ClubSnapshotSchema = z.object({
   }
 });
 export type ClubSnapshot = z.infer<typeof ClubSnapshotSchema>;
+
+export const QUALITY_ORDER: readonly Quality[] = ['BRONZE', 'SILVER', 'GOLD'];
 
 export function qualityOf(rating: number): Quality {
   if (rating >= 75) return 'GOLD';

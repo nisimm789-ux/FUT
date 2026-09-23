@@ -1,41 +1,47 @@
-import type { SelectorProfile } from './types.js';
+import type { EaAdapterProfile } from './types.js';
+
+const assetIds = {
+  nation: /\/flags\/(\d+)\.png(?:$|\?)/,
+  league: /\/leagues\/(\d+)\.png(?:$|\?)/,
+  club: /\/clubs\/(\d+)\.png(?:$|\?)/,
+};
 
 /**
- * Profile for the synthetic fixtures in /fixtures/ea (dev + CI). It models the
- * kind of structure we expect to rely on, but it is NOT the real EA markup.
+ * Profile for the Phase 0 synthetic fixtures in /fixtures/ea (dev + CI). It
+ * models the kind of structure we expect to rely on, but it is NOT EA markup.
  */
-export const syntheticV1Profile: SelectorProfile = {
+export const syntheticV1Profile: EaAdapterProfile = {
   id: 'synthetic-v1',
+  fcVersion: 'SYNTHETIC',
+  profileVersion: '1.1.0',
   verified: true,
+  live: false,
   probe: (doc) => doc.querySelector('.ut-root-view[data-fixture-profile="synthetic-v1"]') !== null,
-  contextViews: [
-    ['SBC_CHALLENGE', '.ut-sbc-challenge-view'],
-    ['SBC_HUB', '.ut-sbc-hub-view'],
-    ['PACK_RESULTS', '.ut-pack-results-view'],
-    ['STORE', '.ut-store-view'],
-    ['CLUB', '.ut-club-items-view'],
-    ['SQUADS', '.ut-squads-view'],
-    ['TRANSFERS', '.ut-transfers-view'],
-    ['EVOLUTIONS', '.ut-evolutions-view'],
-    ['HOME', '.ut-home-view'],
+  contextRules: [
+    { kind: 'SBC_CHALLENGE', view: '.ut-sbc-challenge-view', route: /#\/sbc-challenge/ },
+    { kind: 'SBC_HUB', view: '.ut-sbc-hub-view', route: /#\/sbc-hub/ },
+    { kind: 'PACK_RESULTS', view: '.ut-pack-results-view' },
+    { kind: 'STORE', view: '.ut-store-view', route: /#\/store/ },
+    { kind: 'CLUB', view: '.ut-club-items-view', route: /#\/club/ },
+    { kind: 'SQUADS', view: '.ut-squads-view' },
+    { kind: 'TRANSFERS', view: '.ut-transfers-view' },
+    { kind: 'EVOLUTIONS', view: '.ut-evolutions-view' },
+    { kind: 'HOME', view: '.ut-home-view' },
   ],
-  urlHints: [
-    ['SBC_CHALLENGE', /#\/sbc-challenge/],
-    ['SBC_HUB', /#\/sbc-hub/],
-    ['CLUB', /#\/club/],
-    ['STORE', /#\/store/],
-  ],
+  navigation: { item: '.ut-tab-bar [data-page]', selectedClass: 'selected' },
   sbc: {
-    challengeRoot: '.ut-sbc-challenge-view .ut-sbc-challenge',
-    challengeName: '.ut-sbc-challenge-name',
-    requirement: '.ut-sbc-requirements > .ut-sbc-requirement',
-    attrs: {
-      challengeId: 'data-challenge-id',
-      setId: 'data-set-id',
-      squadSize: 'data-squad-size',
-      requirementId: 'data-req-id',
-      requirementKind: 'data-req-kind',
+    requirementsRoot: '.ut-sbc-challenge-view .ut-sbc-challenge',
+    requirementRow: '.ut-sbc-requirements > .ut-sbc-requirement',
+    completedClasses: ['complete'],
+    name: '.ut-sbc-challenge-view .ut-sbc-challenge-name',
+    structural: {
+      challengeIdAttr: 'data-challenge-id',
+      setIdAttr: 'data-set-id',
+      squadSizeAttr: 'data-squad-size',
+      requirementIdAttr: 'data-req-id',
+      requirementKindAttr: 'data-req-kind',
     },
+    assetIdPatterns: assetIds,
   },
   club: {
     list: '.ut-club-items-view .ut-item-list',
@@ -57,9 +63,7 @@ export const syntheticV1Profile: SelectorProfile = {
     },
     assetIdPatterns: {
       definition: /\/players\/(\d+)\.png(?:$|\?)/,
-      nation: /\/flags\/(\d+)\.png(?:$|\?)/,
-      league: /\/leagues\/(\d+)\.png(?:$|\?)/,
-      club: /\/clubs\/(\d+)\.png(?:$|\?)/,
+      ...assetIds,
     },
     rarityClasses: { COMMON: 'common', RARE: 'rare', SPECIAL: 'special' },
     untradeableClass: 'untradeable',

@@ -29,7 +29,7 @@ describe('club-engine', () => {
   });
 
   it('summarizes without exposing individual items', () => {
-    const summary = summarizeClub({ schemaVersion: 1, coverage: 'complete', items, source: 'fixture', observedAt: 0 });
+    const summary = summarizeClub({ schemaVersion: 2, coverage: 'complete', items, provenance: 'LOCAL_FIXTURE', observedAt: 0 });
     expect(summary).toMatchObject({ total: 4, duplicateGroups: 1, byQuality: { SILVER: 4 } });
   });
 });

@@ -6,6 +6,9 @@ no real player data and no user data.
 
 - `pages/*.html` – full documents, one per app context. Used by adapter tests and by the dev site.
 - `data/*.json` – the normalized snapshots the adapter is expected to produce (golden files) and solver inputs.
+- `fc27/*.html` – synthetic pages modelling the **candidate** `fc27-live` profile (en/de/fr/es, same-page states, failure variants). Not captured from EA.
+- `captured/` – minimal fixtures converted from sanitized live inspection reports (`pnpm fixtures:from-report`).
+- `site/fc27.html` – FC 27-structure dev SPA with controls that mutate the current screen in place (same-page observation).
 - `site/index.html` – SPA-style dev page that swaps views without reloading (tests SPA context detection).
 - `serve.mjs` – `pnpm fixtures:serve` → http://localhost:4173/site/
 - `scripts/generate.mjs` – regenerates pages + golden data deterministically.

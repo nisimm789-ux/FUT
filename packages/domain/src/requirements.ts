@@ -1,10 +1,37 @@
-import { qualityOf } from '@fc/contracts';
-import type { AttributeDimension, ClubItem, ItemFilter, RequirementEvaluation, SbcRequirement } from '@fc/contracts';
+import { QUALITY_ORDER, qualityOf } from '@fc/contracts';
+import type { AttributeDimension, ClubItem, ItemFilter, Quality, RequirementEvaluation, SbcRequirement } from '@fc/contracts';
 
 /** Fields the requirement logic reads; lets callers pass full ClubItems or lighter shapes. */
 export type RatedItem = Pick<ClubItem, 'id' | 'rating' | 'rarity' | 'nationId' | 'leagueId' | 'clubId'>;
 
+export type RequirementSupport =
+  | { supported: true }
+  | { supported: false; reason: 'UNRECOGNIZED' | 'CHEMISTRY_NOT_IMPLEMENTED' | 'ITEM_PROGRAM_DATA_UNAVAILABLE' };
+
+/**
+ * Single source of truth for which requirements can be VERIFIED today.
+ * Anything unsupported must make a solve UNSUPPORTED, never SOLVED.
+ */
+export function requirementSupport(requirement: SbcRequirement): RequirementSupport {
+  switch (requirement.type) {
+    case 'UNKNOWN':
+      return { supported: false, reason: 'UNRECOGNIZED' };
+    case 'MIN_CHEMISTRY':
+      return { supported: false, reason: 'CHEMISTRY_NOT_IMPLEMENTED' };
+    case 'MIN_COUNT':
+    case 'MAX_COUNT':
+    case 'EXACT_COUNT':
+      // Club items do not carry programme membership (TOTW, TOTS...) yet, so a
+      // programme filter cannot be evaluated — in particular MAX/EXACT would be
+      // trivially (and wrongly) satisfied.
+      return requirement.filter.programs ? { supported: false, reason: 'ITEM_PROGRAM_DATA_UNAVAILABLE' } : { supported: true };
+    default:
+      return { supported: true };
+  }
+}
+
 export function matchesFilter(item: RatedItem, filter: ItemFilter): boolean {
+  if (filter.programs) return false; // no programme data on items; see requirementSupport
   if (filter.rarities && !filter.rarities.includes(item.rarity)) return false;
   if (filter.qualities && !filter.qualities.includes(qualityOf(item.rating))) return false;
   if (filter.nationIds && !filter.nationIds.includes(item.nationId)) return false;
@@ -31,7 +58,7 @@ export function dimensionValue(item: RatedItem, dimension: AttributeDimension): 
  * each rating above the average contributes its excess once more,
  * then the total is rounded and divided by the squad size (floored).
  * Squads smaller than `squadSize` count missing slots as 0.
- * NOTE: must be validated against live EA values before Phase 1.
+ * NOTE: must be validated against live EA values.
  */
 export function squadRating(ratings: readonly number[], squadSize = 11): number {
   if (squadSize <= 0) return 0;
@@ -41,7 +68,7 @@ export function squadRating(ratings: readonly number[], squadSize = 11): number 
   return Math.floor(Math.round(sum + excess) / squadSize);
 }
 
-function countBy(items: readonly RatedItem[], dimension: AttributeDimension): Map<number, number> {
+export function countBy(items: readonly RatedItem[], dimension: AttributeDimension): Map<number, number> {
   const counts = new Map<number, number>();
   for (const item of items) {
     const key = dimensionValue(item, dimension);
@@ -50,15 +77,12 @@ function countBy(items: readonly RatedItem[], dimension: AttributeDimension): Ma
   return counts;
 }
 
-/** Requirement types the Phase 0 evaluator can decide. */
-export const EVALUABLE_REQUIREMENT_TYPES = new Set<SbcRequirement['type']>([
-  'MIN_SQUAD_RATING',
-  'MIN_COUNT',
-  'MAX_COUNT',
-  'PLAYER_RATING_RANGE',
-  'MAX_SAME',
-  'MIN_UNIQUE',
-]);
+export function qualityInRange(rating: number, min: Quality | undefined, max: Quality | undefined): boolean {
+  const q = QUALITY_ORDER.indexOf(qualityOf(rating));
+  const lo = min === undefined ? 0 : QUALITY_ORDER.indexOf(min);
+  const hi = max === undefined ? QUALITY_ORDER.length - 1 : QUALITY_ORDER.indexOf(max);
+  return q >= lo && q <= hi;
+}
 
 export function evaluateRequirement(
   requirement: SbcRequirement,
@@ -71,12 +95,16 @@ export function evaluateRequirement(
     satisfied,
     detail,
   });
+  const support = requirementSupport(requirement);
+  if (!support.supported) return result(false, `cannot verify: ${support.reason}`);
 
   switch (requirement.type) {
     case 'MIN_SQUAD_RATING': {
       const rating = squadRating(squad.map((i) => i.rating), squadSize);
       return result(rating >= requirement.value, `squad rating ${rating} >= ${requirement.value}`);
     }
+    case 'SQUAD_SIZE':
+      return result(squad.length === requirement.count, `${squad.length} players == ${requirement.count}`);
     case 'MIN_COUNT': {
       const n = squad.filter((i) => matchesFilter(i, requirement.filter)).length;
       return result(n >= requirement.count, `${n} matching >= ${requirement.count}`);
@@ -84,6 +112,10 @@ export function evaluateRequirement(
     case 'MAX_COUNT': {
       const n = squad.filter((i) => matchesFilter(i, requirement.filter)).length;
       return result(n <= requirement.count, `${n} matching <= ${requirement.count}`);
+    }
+    case 'EXACT_COUNT': {
+      const n = squad.filter((i) => matchesFilter(i, requirement.filter)).length;
+      return result(n === requirement.count, `${n} matching == ${requirement.count}`);
     }
     case 'PLAYER_RATING_RANGE': {
       const bad = squad.filter(
@@ -93,18 +125,29 @@ export function evaluateRequirement(
       ).length;
       return result(bad === 0, `${bad} players outside range [${requirement.min ?? 1}, ${requirement.max ?? 99}]`);
     }
+    case 'PLAYER_QUALITY': {
+      const bad = squad.filter((i) => !qualityInRange(i.rating, requirement.min, requirement.max)).length;
+      return result(bad === 0, `${bad} players outside quality [${requirement.min ?? 'BRONZE'}, ${requirement.max ?? 'GOLD'}]`);
+    }
     case 'MAX_SAME': {
       const max = Math.max(0, ...countBy(squad, requirement.dimension).values());
       return result(max <= requirement.count, `max same ${requirement.dimension} ${max} <= ${requirement.count}`);
+    }
+    case 'MIN_SAME': {
+      const max = Math.max(0, ...countBy(squad, requirement.dimension).values());
+      return result(max >= requirement.count, `max same ${requirement.dimension} ${max} >= ${requirement.count}`);
     }
     case 'MIN_UNIQUE': {
       const unique = countBy(squad, requirement.dimension).size;
       return result(unique >= requirement.count, `unique ${requirement.dimension} ${unique} >= ${requirement.count}`);
     }
+    case 'MAX_UNIQUE': {
+      const unique = countBy(squad, requirement.dimension).size;
+      return result(unique <= requirement.count, `unique ${requirement.dimension} ${unique} <= ${requirement.count}`);
+    }
     case 'MIN_CHEMISTRY':
-      return result(false, 'chemistry evaluation not supported yet');
     case 'UNKNOWN':
-      return result(false, `unrecognized requirement: ${requirement.reason}`);
+      return result(false, 'cannot verify');
   }
 }
 

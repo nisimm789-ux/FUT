@@ -9,7 +9,7 @@
   },
   "type": "module",
   "scripts": {
-    "typecheck": "pnpm -r --parallel run typecheck",
+    "typecheck": "pnpm -r --parallel run typecheck && tsc -p scripts/tsconfig.json",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -20,7 +20,9 @@
     "fixtures:serve": "node fixtures/ea/serve.mjs",
     "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
     "build:extension:dev": "pnpm --filter @fc/extension run build:dev",
-    "smoke:extension": "node scripts/extension-smoke.mjs"
+    "smoke:extension": "node scripts/extension-smoke.mjs",
+    "fixtures:from-report": "tsx scripts/report-to-fixture.ts",
+    "fixtures:generate": "node fixtures/ea/scripts/generate.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -33,7 +35,11 @@
     "typescript": "5.9.3",
     "typescript-eslint": "^8.70.1",
     "vitest": "^5.0.1",
-    "playwright-core": "^1.56.0"
+    "playwright-core": "^1.56.0",
+    "tsx": "^4.21.0",
+    "@fc/ea-adapter": "workspace:*",
+    "@fc/ea-fixtures": "workspace:*",
+    "@fc/contracts": "workspace:*"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

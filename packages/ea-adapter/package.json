@@ -19,5 +19,6 @@
     "@fc/club-engine": "workspace:*",
     "@fc/ea-fixtures": "workspace:*",
     "@fc/solver": "workspace:*"
-  }
+  },
+  "sideEffects": false
 }

@@ -22,5 +22,12 @@ export const uiStyles = `
 .fca-status-UNSUPPORTED { color: #fbbf5c; }
 .fca-muted { color: var(--fca-muted, #9aa5b8); font-size: 12px; }
 .fca-ok { color: #6ee7a0; }
+.fca-prov-EA_WEB_LIVE { background: #173d2a; color: #6ee7a0; }
+.fca-prov-LOCAL_FIXTURE, .fca-prov-IMPORTED_FIXTURE, .fca-prov-MANUAL { background: #45300f; color: #fbbf5c; }
+.fca-live { border-color: #2f7a52; }
+.fca-demo { border-style: dashed; border-color: #8a6a1f; background-image: repeating-linear-gradient(135deg, transparent 0 12px, rgba(251,191,92,.04) 12px 24px); }
+.fca-demo-banner { background: #45300f; color: #fbbf5c; padding: 4px 8px; border-radius: 6px; font-size: 12px; margin: 0 0 8px; }
+.fca-reqs { margin: 8px 0 0; padding-left: 18px; font-size: 13px; }
+.fca-card h2 .fca-pill { text-transform: none; letter-spacing: 0; margin-left: 4px; }
 .fca-fail { color: #f58b98; }
 `;

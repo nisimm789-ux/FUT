@@ -1,5 +1,5 @@
 import { CAPABILITIES, CONTRACTS_VERSION } from '@fc/contracts';
-import type { AdapterHealth, CapabilityName, CapabilityState, ParserFailureCategory, RemoteConfig } from '@fc/contracts';
+import type { AdapterFailure, AdapterHealth, CapabilityName, CapabilityState, ParserFailureCategory, RemoteConfig } from '@fc/contracts';
 
 const READ_CAPABILITIES: readonly CapabilityName[] = ['sbcReading', 'clubReading', 'squadReading', 'packReading', 'evolutionReading'];
 
@@ -13,7 +13,7 @@ export interface HealthTrackerOptions {
 
 export interface HealthTracker {
   snapshot(): AdapterHealth;
-  setProfile(profileId: string, supported: readonly CapabilityName[]): void;
+  setProfile(profileId: string, supported: readonly CapabilityName[], verified: boolean): void;
   reportSuccess(capability: CapabilityName): void;
   reportFailure(capability: CapabilityName, category: ParserFailureCategory): void;
   /** True if the capability may be used now (not disabled/unsupported). */
@@ -34,6 +34,8 @@ export function createHealthTracker(options: HealthTrackerOptions): HealthTracke
   const tooOld = remote ? compareSemver(options.adapterVersion, remote.minAdapterVersion) < 0 : false;
 
   let profileId = 'none';
+  let profileVerified = false;
+  const recentFailures: AdapterFailure[] = [];
   let supported = new Set<CapabilityName>();
   let states = initialStates();
   let safeMode = Boolean(remote?.forceSafeMode) || tooOld;
@@ -65,9 +67,11 @@ export function createHealthTracker(options: HealthTrackerOptions): HealthTracke
       schemaVersion: CONTRACTS_VERSION,
       adapterVersion: options.adapterVersion,
       profileId,
+      profileVerified,
       safeMode,
       capabilities,
       lastFailure,
+      recentFailures: [...recentFailures],
       updatedAt,
     };
   }
@@ -84,10 +88,11 @@ export function createHealthTracker(options: HealthTrackerOptions): HealthTracke
 
   return {
     snapshot,
-    setProfile(nextProfileId, nextSupported) {
+    setProfile(nextProfileId, nextSupported, verified) {
       if (nextProfileId === profileId) return;
       update(() => {
         profileId = nextProfileId;
+        profileVerified = verified;
         supported = new Set(nextSupported);
         states = initialStates();
         consecutiveReadFailures = 0;
@@ -103,6 +108,8 @@ export function createHealthTracker(options: HealthTrackerOptions): HealthTracke
       update(() => {
         states[capability] = 'degraded';
         lastFailure = { capability, category, at: options.now() };
+        recentFailures.push(lastFailure);
+        if (recentFailures.length > 10) recentFailures.shift();
         if (READ_CAPABILITIES.includes(capability)) {
           consecutiveReadFailures += 1;
           if (consecutiveReadFailures >= threshold) safeMode = true;
