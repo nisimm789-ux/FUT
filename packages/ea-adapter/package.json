@@ -1,0 +1,23 @@
+{
+  "name": "@fc/ea-adapter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "READ-ONLY anti-corruption layer between the EA FC Web App DOM and normalized contracts. The only package allowed to know EA selectors.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@fc/contracts": "workspace:*",
+    "@fc/domain": "workspace:*",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@fc/club-engine": "workspace:*",
+    "@fc/ea-fixtures": "workspace:*",
+    "@fc/solver": "workspace:*"
+  }
+}

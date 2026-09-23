@@ -1,0 +1,19 @@
+{
+  "name": "@fc/ea-fixtures",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Sanitized, synthetic EA-Web-App-like pages and normalized golden data. No real EA markup or user data.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./data/*": "./data/*"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "generate": "node scripts/generate.mjs",
+    "serve": "node serve.mjs"
+  },
+  "dependencies": {
+    "@fc/contracts": "workspace:*"
+  }
+}

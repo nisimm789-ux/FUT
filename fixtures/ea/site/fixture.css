@@ -1,0 +1,12 @@
+body { font-family: system-ui, sans-serif; margin: 0; background: #10141c; color: #e8ecf3; }
+.fixture-banner { background: #f5c542; color: #1a1a1a; padding: 6px 16px; font-size: 13px; }
+.ut-tab-bar { display: flex; gap: 8px; padding: 12px 16px; background: #1a2130; flex-wrap: wrap; }
+.ut-tab-bar button { background: #2a3448; color: inherit; border: 0; border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+.ut-tab-bar button[aria-current="page"] { background: #4b6cff; }
+.ut-content { padding: 16px; }
+.ut-item-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.ut-item { background: #1f2738; border-radius: 8px; padding: 8px; display: grid; gap: 2px; font-size: 13px; }
+.ut-item.rare { outline: 1px solid #f5c542; }
+.ut-item img { width: 16px; height: 16px; }
+.ut-item-rating { font-weight: 700; font-size: 18px; }
+.ut-sbc-requirement { padding: 4px 0; }

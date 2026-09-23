@@ -1,0 +1,680 @@
+{
+  "schemaVersion": 1,
+  "coverage": "complete",
+  "items": [
+    {
+      "id": "it-0001",
+      "definitionId": 900001,
+      "name": "Synthetic Player 01",
+      "rating": 61,
+      "rarity": "COMMON",
+      "positions": [
+        "ST"
+      ],
+      "nationId": 54,
+      "leagueId": 53,
+      "clubId": 243,
+      "tradeable": false,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0002",
+      "definitionId": 900002,
+      "name": "Synthetic Player 02",
+      "rating": 71,
+      "rarity": "COMMON",
+      "positions": [
+        "ST"
+      ],
+      "nationId": 52,
+      "leagueId": 53,
+      "clubId": 240,
+      "tradeable": false,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0003",
+      "definitionId": 900003,
+      "name": "Synthetic Player 03",
+      "rating": 83,
+      "rarity": "COMMON",
+      "positions": [
+        "RW"
+      ],
+      "nationId": 52,
+      "leagueId": 31,
+      "clubId": 45,
+      "tradeable": false,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0004",
+      "definitionId": 900004,
+      "name": "Synthetic Player 04",
+      "rating": 66,
+      "rarity": "COMMON",
+      "positions": [
+        "CAM"
+      ],
+      "nationId": 52,
+      "leagueId": 31,
+      "clubId": 46,
+      "tradeable": true,
+      "location": "CLUB",
+      "estimatedPrice": 250
+    },
+    {
+      "id": "it-0005",
+      "definitionId": 900005,
+      "name": "Synthetic Player 05",
+      "rating": 70,
+      "rarity": "COMMON",
+      "positions": [
+        "LW"
+      ],
+      "nationId": 27,
+      "leagueId": 31,
+      "clubId": 44,
+      "tradeable": true,
+      "location": "CLUB",
+      "estimatedPrice": 250
+    },
+    {
+      "id": "it-0006",
+      "definitionId": 900006,
+      "name": "Synthetic Player 06",
+      "rating": 76,
+      "rarity": "COMMON",
+      "positions": [
+        "LM"
+      ],
+      "nationId": 27,
+      "leagueId": 31,
+      "clubId": 46,
+      "tradeable": false,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0007",
+      "definitionId": 900007,
+      "name": "Synthetic Player 07",
+      "rating": 72,
+      "rarity": "COMMON",
+      "positions": [
+        "LB"
+      ],
+      "nationId": 54,
+      "leagueId": 13,
+      "clubId": 9,
+      "tradeable": false,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0008",
+      "definitionId": 900008,
+      "name": "Synthetic Player 08",
+      "rating": 81,
+      "rarity": "COMMON",
+      "positions": [
+        "ST"
+      ],
+      "nationId": 18,
+      "leagueId": 19,
+      "clubId": 32,
+      "tradeable": true,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0010",
+      "definitionId": 900010,
+      "name": "Synthetic Player 10",
+      "rating": 62,
+      "rarity": "RARE",
+      "positions": [
+        "GK"
+      ],
+      "nationId": 54,
+      "leagueId": 13,
+      "clubId": 9,
+      "tradeable": true,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0011",
+      "definitionId": 900011,
+      "name": "Synthetic Player 11",
+      "rating": 69,
+      "rarity": "COMMON",
+      "positions": [
+        "CM"
+      ],
+      "nationId": 45,
+      "leagueId": 53,
+      "clubId": 240,
+      "tradeable": false,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0012",
+      "definitionId": 900012,
+      "name": "Synthetic Player 12",
+      "rating": 79,
+      "rarity": "COMMON",
+      "positions": [
+        "RM"
+      ],
+      "nationId": 21,
+      "leagueId": 19,
+      "clubId": 22,
+      "tradeable": true,
+      "location": "CLUB",
+      "estimatedPrice": 1600
+    },
+    {
+      "id": "it-0013",
+      "definitionId": 900013,
+      "name": "Synthetic Player 13",
+      "rating": 86,
+      "rarity": "COMMON",
+      "positions": [
+        "GK"
+      ],
+      "nationId": 14,
+      "leagueId": 13,
+      "clubId": 10,
+      "tradeable": false,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0014",
+      "definitionId": 900014,
+      "name": "Synthetic Player 14",
+      "rating": 70,
+      "rarity": "COMMON",
+      "positions": [
+        "ST"
+      ],
+      "nationId": 18,
+      "leagueId": 16,
+      "clubId": 219,
+      "tradeable": false,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0015",
+      "definitionId": 900015,
+      "name": "Synthetic Player 15",
+      "rating": 72,
+      "rarity": "COMMON",
+      "positions": [
+        "LM"
+      ],
+      "nationId": 27,
+      "leagueId": 31,
+      "clubId": 44,
+      "tradeable": false,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0016",
+      "definitionId": 900016,
+      "name": "Synthetic Player 16",
+      "rating": 78,
+      "rarity": "COMMON",
+      "positions": [
+        "RM"
+      ],
+      "nationId": 45,
+      "leagueId": 53,
+      "clubId": 240,
+      "tradeable": false,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0017",
+      "definitionId": 900017,
+      "name": "Synthetic Player 17",
+      "rating": 83,
+      "rarity": "COMMON",
+      "positions": [
+        "RW"
+      ],
+      "nationId": 52,
+      "leagueId": 53,
+      "clubId": 241,
+      "tradeable": true,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0019",
+      "definitionId": 900019,
+      "name": "Synthetic Player 19",
+      "rating": 63,
+      "rarity": "RARE",
+      "positions": [
+        "CAM"
+      ],
+      "nationId": 52,
+      "leagueId": 53,
+      "clubId": 243,
+      "tradeable": true,
+      "location": "CLUB",
+      "estimatedPrice": 250
+    },
+    {
+      "id": "it-0020",
+      "definitionId": 900020,
+      "name": "Synthetic Player 20",
+      "rating": 84,
+      "rarity": "RARE",
+      "positions": [
+        "CM"
+      ],
+      "nationId": 18,
+      "leagueId": 16,
+      "clubId": 219,
+      "tradeable": false,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0021",
+      "definitionId": 900021,
+      "name": "Synthetic Player 21",
+      "rating": 68,
+      "rarity": "COMMON",
+      "positions": [
+        "ST"
+      ],
+      "nationId": 14,
+      "leagueId": 16,
+      "clubId": 219,
+      "tradeable": false,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0022",
+      "definitionId": 900022,
+      "name": "Synthetic Player 22",
+      "rating": 60,
+      "rarity": "RARE",
+      "positions": [
+        "LW"
+      ],
+      "nationId": 18,
+      "leagueId": 16,
+      "clubId": 73,
+      "tradeable": false,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0023",
+      "definitionId": 900023,
+      "name": "Synthetic Player 23",
+      "rating": 69,
+      "rarity": "RARE",
+      "positions": [
+        "CB"
+      ],
+      "nationId": 52,
+      "leagueId": 53,
+      "clubId": 240,
+      "tradeable": true,
+      "location": "CLUB",
+      "estimatedPrice": 250
+    },
+    {
+      "id": "it-0024",
+      "definitionId": 900024,
+      "name": "Synthetic Player 24",
+      "rating": 78,
+      "rarity": "COMMON",
+      "positions": [
+        "CB"
+      ],
+      "nationId": 45,
+      "leagueId": 53,
+      "clubId": 241,
+      "tradeable": true,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0025",
+      "definitionId": 900025,
+      "name": "Synthetic Player 25",
+      "rating": 74,
+      "rarity": "RARE",
+      "positions": [
+        "RW"
+      ],
+      "nationId": 27,
+      "leagueId": 31,
+      "clubId": 44,
+      "tradeable": true,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0026",
+      "definitionId": 900026,
+      "name": "Synthetic Player 26",
+      "rating": 61,
+      "rarity": "COMMON",
+      "positions": [
+        "RB"
+      ],
+      "nationId": 54,
+      "leagueId": 53,
+      "clubId": 241,
+      "tradeable": false,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0028",
+      "definitionId": 900028,
+      "name": "Synthetic Player 28",
+      "rating": 65,
+      "rarity": "COMMON",
+      "positions": [
+        "LW"
+      ],
+      "nationId": 18,
+      "leagueId": 19,
+      "clubId": 32,
+      "tradeable": true,
+      "location": "CLUB",
+      "estimatedPrice": 250
+    },
+    {
+      "id": "it-0029",
+      "definitionId": 900029,
+      "name": "Synthetic Player 29",
+      "rating": 65,
+      "rarity": "RARE",
+      "positions": [
+        "LM"
+      ],
+      "nationId": 52,
+      "leagueId": 31,
+      "clubId": 46,
+      "tradeable": true,
+      "location": "CLUB",
+      "estimatedPrice": 250
+    },
+    {
+      "id": "it-0030",
+      "definitionId": 900030,
+      "name": "Synthetic Player 30",
+      "rating": 64,
+      "rarity": "COMMON",
+      "positions": [
+        "CM"
+      ],
+      "nationId": 54,
+      "leagueId": 13,
+      "clubId": 9,
+      "tradeable": false,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0031",
+      "definitionId": 900031,
+      "name": "Synthetic Player 31",
+      "rating": 61,
+      "rarity": "RARE",
+      "positions": [
+        "CB"
+      ],
+      "nationId": 52,
+      "leagueId": 31,
+      "clubId": 44,
+      "tradeable": true,
+      "location": "CLUB",
+      "estimatedPrice": 250
+    },
+    {
+      "id": "it-0032",
+      "definitionId": 900032,
+      "name": "Synthetic Player 32",
+      "rating": 71,
+      "rarity": "COMMON",
+      "positions": [
+        "RM"
+      ],
+      "nationId": 21,
+      "leagueId": 19,
+      "clubId": 21,
+      "tradeable": false,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0033",
+      "definitionId": 900033,
+      "name": "Synthetic Player 33",
+      "rating": 80,
+      "rarity": "COMMON",
+      "positions": [
+        "CAM"
+      ],
+      "nationId": 21,
+      "leagueId": 19,
+      "clubId": 21,
+      "tradeable": true,
+      "location": "CLUB",
+      "estimatedPrice": 2250
+    },
+    {
+      "id": "it-0034",
+      "definitionId": 900034,
+      "name": "Synthetic Player 34",
+      "rating": 67,
+      "rarity": "RARE",
+      "positions": [
+        "CDM"
+      ],
+      "nationId": 21,
+      "leagueId": 19,
+      "clubId": 32,
+      "tradeable": false,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0035",
+      "definitionId": 900035,
+      "name": "Synthetic Player 35",
+      "rating": 64,
+      "rarity": "RARE",
+      "positions": [
+        "CB"
+      ],
+      "nationId": 18,
+      "leagueId": 16,
+      "clubId": 219,
+      "tradeable": false,
+      "location": "CLUB",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0037",
+      "definitionId": 900037,
+      "name": "Synthetic Player 37",
+      "rating": 73,
+      "rarity": "RARE",
+      "positions": [
+        "RW"
+      ],
+      "nationId": 52,
+      "leagueId": 31,
+      "clubId": 45,
+      "tradeable": true,
+      "location": "CLUB",
+      "estimatedPrice": 250
+    },
+    {
+      "id": "it-0038",
+      "definitionId": 900038,
+      "name": "Synthetic Player 38",
+      "rating": 71,
+      "rarity": "COMMON",
+      "positions": [
+        "ST"
+      ],
+      "nationId": 18,
+      "leagueId": 19,
+      "clubId": 32,
+      "tradeable": true,
+      "location": "CLUB",
+      "estimatedPrice": 250
+    },
+    {
+      "id": "it-0039",
+      "definitionId": 900039,
+      "name": "Synthetic Player 39",
+      "rating": 83,
+      "rarity": "COMMON",
+      "positions": [
+        "LW"
+      ],
+      "nationId": 52,
+      "leagueId": 53,
+      "clubId": 240,
+      "tradeable": true,
+      "location": "CLUB",
+      "estimatedPrice": 6400
+    },
+    {
+      "id": "it-0040",
+      "definitionId": 900040,
+      "name": "Synthetic Player 40",
+      "rating": 64,
+      "rarity": "COMMON",
+      "positions": [
+        "CDM"
+      ],
+      "nationId": 18,
+      "leagueId": 13,
+      "clubId": 9,
+      "tradeable": true,
+      "location": "CLUB",
+      "estimatedPrice": 250
+    },
+    {
+      "id": "it-0009",
+      "definitionId": 900009,
+      "name": "Synthetic Player 09",
+      "rating": 85,
+      "rarity": "COMMON",
+      "positions": [
+        "LW"
+      ],
+      "nationId": 54,
+      "leagueId": 13,
+      "clubId": 9,
+      "tradeable": false,
+      "location": "SBC_STORAGE",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0018",
+      "definitionId": 900018,
+      "name": "Synthetic Player 18",
+      "rating": 76,
+      "rarity": "COMMON",
+      "positions": [
+        "LB"
+      ],
+      "nationId": 54,
+      "leagueId": 13,
+      "clubId": 9,
+      "tradeable": true,
+      "location": "SBC_STORAGE",
+      "estimatedPrice": 550
+    },
+    {
+      "id": "it-0027",
+      "definitionId": 900027,
+      "name": "Synthetic Player 27",
+      "rating": 70,
+      "rarity": "RARE",
+      "positions": [
+        "GK"
+      ],
+      "nationId": 27,
+      "leagueId": 31,
+      "clubId": 45,
+      "tradeable": false,
+      "location": "SBC_STORAGE",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0036",
+      "definitionId": 900036,
+      "name": "Synthetic Player 36",
+      "rating": 84,
+      "rarity": "RARE",
+      "positions": [
+        "LB"
+      ],
+      "nationId": 54,
+      "leagueId": 13,
+      "clubId": 1,
+      "tradeable": true,
+      "location": "SBC_STORAGE",
+      "estimatedPrice": 9050
+    },
+    {
+      "id": "it-0041",
+      "definitionId": 900003,
+      "name": "Synthetic Player 03",
+      "rating": 83,
+      "rarity": "COMMON",
+      "positions": [
+        "RW"
+      ],
+      "nationId": 52,
+      "leagueId": 31,
+      "clubId": 45,
+      "tradeable": false,
+      "location": "SBC_STORAGE",
+      "estimatedPrice": null
+    },
+    {
+      "id": "it-0042",
+      "definitionId": 900006,
+      "name": "Synthetic Player 06",
+      "rating": 76,
+      "rarity": "COMMON",
+      "positions": [
+        "LM"
+      ],
+      "nationId": 27,
+      "leagueId": 31,
+      "clubId": 46,
+      "tradeable": false,
+      "location": "SBC_STORAGE",
+      "estimatedPrice": null
+    }
+  ],
+  "source": "fixture",
+  "observedAt": 0
+}

@@ -1,0 +1,43 @@
+{
+  "name": "fc-assistant",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Intelligence layer for the EA SPORTS FC Ultimate Team Web App (browser extension + API).",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "type": "module",
+  "scripts": {
+    "typecheck": "pnpm -r --parallel run typecheck",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "pnpm --filter @fc/extension run build",
+    "build:extension": "pnpm --filter @fc/extension run build",
+    "dev:extension": "pnpm --filter @fc/extension run dev",
+    "dev:api": "pnpm --filter @fc/api run dev",
+    "fixtures:serve": "node fixtures/ea/serve.mjs",
+    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
+    "build:extension:dev": "pnpm --filter @fc/extension run build:dev",
+    "smoke:extension": "node scripts/extension-smoke.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.18.0",
+    "eslint": "^10.11.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "fast-check": "^4.10.2",
+    "globals": "^17.12.0",
+    "happy-dom": "^20.14.5",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.70.1",
+    "vitest": "^5.0.1",
+    "playwright-core": "^1.56.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

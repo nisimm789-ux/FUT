@@ -1,0 +1,16 @@
+{
+  "name": "@fc/telemetry",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Privacy-first telemetry abstraction and sanitized debug reports. Phase 0 sends nothing off-device.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@fc/contracts": "workspace:*"
+  }
+}

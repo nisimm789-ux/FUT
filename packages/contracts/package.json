@@ -1,0 +1,16 @@
+{
+  "name": "@fc/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Normalized, versioned, runtime-validated contracts shared by every layer.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  }
+}

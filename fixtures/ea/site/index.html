@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FC Web App - synthetic dev fixture</title>
+<link rel="stylesheet" href="./fixture.css">
+</head>
+<body>
+<div class="fixture-banner">Synthetic dev fixture - not the EA FC Web App. Views are swapped in-place (SPA-style) without page reloads.</div>
+<div class="ut-root-view" data-fixture-profile="synthetic-v1">
+  <nav class="ut-tab-bar" aria-label="fixture navigation">
+    <button data-page="home">Home</button>
+    <button data-page="squads">Squads</button>
+    <button data-page="sbc-hub">SBC Hub</button>
+    <button data-page="sbc-challenge">SBC Challenge</button>
+    <button data-page="sbc-challenge-unsupported">SBC (unsupported reqs)</button>
+    <button data-page="club">Club</button>
+    <button data-page="club-malformed">Club (malformed)</button>
+    <button data-page="store">Store</button>
+    <button data-page="pack-results">Pack Results</button>
+    <button data-page="transfers">Transfers</button>
+    <button data-page="evolutions">Evolutions</button>
+    <button data-page="unknown">Unknown view</button>
+  </nav>
+  <main class="ut-content"></main>
+</div>
+<script type="module">
+  // Emulates the EA Web App's SPA behaviour: the URL hash changes and the
+  // view subtree is replaced, but the document is never reloaded.
+  const content = document.querySelector('.ut-content');
+  const parser = new DOMParser();
+  async function show(page) {
+    const html = await (await fetch(`../pages/${page}.html`)).text();
+    const doc = parser.parseFromString(html, 'text/html');
+    const view = doc.querySelector('.ut-content');
+    content.replaceChildren(...(view ? [...view.childNodes].map((n) => document.importNode(n, true)) : []));
+    for (const b of document.querySelectorAll('[data-page]')) b.toggleAttribute('aria-current', b.dataset.page === page);
+    if (location.hash !== `#/${page}`) history.pushState(null, '', `#/${page}`);
+  }
+  document.querySelector('.ut-tab-bar').addEventListener('click', (e) => {
+    const page = e.target.closest('[data-page]')?.dataset.page;
+    if (page) show(page);
+  });
+  window.addEventListener('popstate', () => show(location.hash.replace('#/', '') || 'home'));
+  show(location.hash.replace('#/', '') || 'home');
+</script>
+</body>
+</html>

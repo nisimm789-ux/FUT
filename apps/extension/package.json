@@ -1,0 +1,35 @@
+{
+  "name": "@fc/extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "FC Assistant browser extension (WXT, Manifest V3, React). Read-only in Phase 0.",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "build:dev": "wxt build --mode development",
+    "zip": "wxt zip",
+    "postinstall": "wxt prepare",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@fc/club-engine": "workspace:*",
+    "@fc/contracts": "workspace:*",
+    "@fc/domain": "workspace:*",
+    "@fc/ea-adapter": "workspace:*",
+    "@fc/ea-fixtures": "workspace:*",
+    "@fc/solver": "workspace:*",
+    "@fc/telemetry": "workspace:*",
+    "@fc/ui": "workspace:*",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@wxt-dev/module-react": "^1.2.2",
+    "wxt": "^0.21.4"
+  }
+}

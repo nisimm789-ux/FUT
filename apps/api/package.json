@@ -1,0 +1,23 @@
+{
+  "name": "@fc/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Backend modular monolith (Fastify). Never receives EA credentials.",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@fc/contracts": "workspace:*",
+    "@fc/solver": "workspace:*",
+    "fastify": "^5.8.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0",
+    "@fc/ea-fixtures": "workspace:*",
+    "@types/node": "^22.18.0"
+  }
+}
