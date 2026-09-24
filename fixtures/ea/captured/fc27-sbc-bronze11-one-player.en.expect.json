@@ -1,0 +1,8 @@
+{
+  "source": "Live FC 27 Web App, 2026-09-24 10:53Z, en. Same SBC with exactly one player placed (slot index 9).",
+  "context": "SBC_CHALLENGE",
+  "requirementTypes": ["PLAYER_QUALITY", "SQUAD_SIZE"],
+  "squadSize": 11,
+  "filledSlots": 1,
+  "slotStates": ["EMPTY", "EMPTY", "EMPTY", "EMPTY", "EMPTY", "EMPTY", "EMPTY", "EMPTY", "EMPTY", "FILLED", "EMPTY"]
+}

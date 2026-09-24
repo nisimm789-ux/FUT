@@ -1,7 +1,10 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { FIXTURES_ROOT } from '@fc/ea-fixtures';
 import type { EaContextSnapshot } from '@fc/contracts';
 import { createDebouncedTask, createEaWebAdapter, fc27FixtureProfile, type EaWebAdapter } from '../src/index.js';
-import { LIVE_URL, loadFc27 } from './helpers.js';
+import { LIVE_URL, loadFc27, loadHtml } from './helpers.js';
 
 let adapter: EaWebAdapter;
 let contexts: EaContextSnapshot['kind'][];
@@ -152,5 +155,61 @@ describe('live profile while slot occupancy is unverified', () => {
     off();
     expect(n).toBe(0);
     expect(live.perf.snapshot().counters.fingerprintUnchanged).toBeGreaterThan(0);
+  });
+});
+
+describe('live occupancy observation on the real captured pitch', () => {
+  const EMPTY = ['ut-item-loading', 'empty'];
+  const FILLED = ['ut-item-loaded', 'draggable', 'animatereplace'];
+  const card = (i: number) => document.querySelectorAll('.ut-squad-slot-view')[i]?.querySelector(':scope > .item.player');
+
+  function setupCaptured() {
+    vi.useFakeTimers();
+    loadHtml(readFileSync(join(FIXTURES_ROOT, 'captured', 'fc27-sbc-bronze11-empty.en.html'), 'utf8'));
+    const live = createEaWebAdapter({ document, window, getUrl: () => LIVE_URL, perfNow: () => Date.now() });
+    const filled: (number | null)[] = [];
+    const read = () => {
+      const r = live.readSbcChallenge();
+      if (r.ok) filled.push(r.value.filledSlots);
+    };
+    read();
+    const off = live.observe({ onContextChange: () => undefined, onScopeChange: read });
+    return { live, filled, off };
+  }
+
+  it('place then remove a player: exactly one meaningful re-read each, 0 -> 1 -> 0', async () => {
+    const { live, filled, off } = setupCaptured();
+    card(9)?.classList.remove(...EMPTY);
+    card(9)?.classList.add(...FILLED);
+    await vi.advanceTimersByTimeAsync(600);
+    card(9)?.classList.remove(...FILLED);
+    card(9)?.classList.add(...EMPTY);
+    await vi.advanceTimersByTimeAsync(600);
+    // Unchanged DOM noise inside the pitch: no further re-read.
+    card(9)?.classList.add('hover');
+    await vi.advanceTimersByTimeAsync(600);
+    off();
+    expect(filled).toEqual([0, 1, 0]);
+    expect(live.perf.snapshot().counters.rereads).toBe(2);
+  });
+
+  it('waits out a transitional render instead of publishing an intermediate unknown state', async () => {
+    const { live, filled, off } = setupCaptured();
+    // EA-like transition: loading removed first, loaded added ~250 ms later.
+    card(9)?.classList.remove(...EMPTY);
+    await vi.advanceTimersByTimeAsync(250);
+    card(9)?.classList.add(...FILLED);
+    await vi.advanceTimersByTimeAsync(1_000);
+    off();
+    expect(filled).toEqual([0, 1]);
+    expect(live.perf.snapshot().counters.unstableDeferrals).toBeGreaterThan(0);
+  });
+
+  it('if the state stays ambiguous after the settle window, reads once and reports unknown (null)', async () => {
+    const { filled, off } = setupCaptured();
+    card(9)?.classList.remove(...EMPTY); // neither class: stays ambiguous
+    await vi.advanceTimersByTimeAsync(1_500);
+    off();
+    expect(filled).toEqual([0, null]);
   });
 });

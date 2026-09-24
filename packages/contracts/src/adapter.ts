@@ -85,11 +85,14 @@ export const PERF_COUNTERS = [
   'fingerprintUnchanged',
   'rereads',
   'duplicateSnapshotsSuppressed',
+  /** Re-checks postponed because slot occupancy was mid-transition (ambiguous). */
+  'unstableDeferrals',
 ] as const;
 
 /** Numbers only: safe for diagnostics and telemetry. */
 export const AdapterPerfSchema = z.object({
   timings: z.record(z.enum(PERF_TIMINGS), TimingStatSchema),
-  counters: z.record(z.enum(PERF_COUNTERS), z.number().int().nonnegative()),
+  // Partial: reports/state from older adapters may lack counters added later.
+  counters: z.partialRecord(z.enum(PERF_COUNTERS), z.number().int().nonnegative()),
 });
 export type AdapterPerf = z.infer<typeof AdapterPerfSchema>;

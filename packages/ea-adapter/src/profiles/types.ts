@@ -82,7 +82,18 @@ export interface SbcProfile {
    * slot. Without a `filled` signature, occupancy is UNKNOWN (filledSlots = null)
    * rather than guessed.
    */
-  slots?: { slot: string; filled?: string; locked?: string };
+  slots?: {
+    slot: string;
+    /** Binary filled selector (synthetic fixtures). Superseded by `occupancy` when present. */
+    filled?: string;
+    locked?: string;
+    /**
+     * Evidence-based tri-state occupancy: exactly one `container` per slot;
+     * `filledClass` on it => FILLED, `emptyClass` (without filledClass) => EMPTY,
+     * anything else (none, both, 0 or >1 containers) => UNKNOWN.
+     */
+    occupancy?: { container: string; filledClass: string; emptyClass: string };
+  };
   /** Document-level selector for the challenge title (display only). */
   name?: string;
   /** Explicit structural encodings, when the page provides them (fixtures). */

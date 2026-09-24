@@ -1,4 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { FIXTURES_ROOT } from '@fc/ea-fixtures';
 import { requirementSupport } from '@fc/domain';
 import { createEaWebAdapter, fc27FixtureProfile } from '@fc/ea-adapter';
 import { solveLocally } from '@fc/solver';
@@ -6,7 +9,7 @@ import { noopTelemetry } from '@fc/telemetry';
 import { createContentController } from '../src/content/controller.js';
 import { TabStateSchema, type TabState } from '../src/messaging/messages.js';
 import { buildDemoProblem } from '../src/sidepanel/solve-demo.js';
-import { LIVE_URL, loadFc27, loadPage } from './helpers.js';
+import { LIVE_URL, loadFc27, loadHtml, loadPage } from './helpers.js';
 
 afterEach(() => vi.useRealTimers());
 
@@ -131,6 +134,28 @@ describe('content controller on FC 27 structure', () => {
     await vi.advanceTimersByTimeAsync(400);
     controller.stop();
     expect(states.length).toBe(before);
+  });
+
+  it('real captured pitch: place/remove a player publishes exactly one snapshot each (0 -> 1 -> 0), none for unchanged DOM', async () => {
+    vi.useFakeTimers();
+    loadHtml(readFileSync(join(FIXTURES_ROOT, 'captured', 'fc27-sbc-bronze11-empty.en.html'), 'utf8'));
+    const { controller, states, last } = setup(LIVE_URL);
+    controller.start();
+    expect(last()?.sbc?.snapshot).toMatchObject({ filledSlots: 0, provenance: 'EA_WEB_LIVE' });
+    const before = states.length;
+    const card = document.querySelectorAll('.ut-squad-slot-view')[9]?.querySelector(':scope > .item.player');
+    card?.classList.replace('ut-item-loading', 'ut-item-loaded');
+    await vi.advanceTimersByTimeAsync(600);
+    expect(states.length).toBe(before + 1);
+    expect(last()?.sbc?.snapshot.filledSlots).toBe(1);
+    card?.classList.replace('ut-item-loaded', 'ut-item-loading');
+    await vi.advanceTimersByTimeAsync(600);
+    expect(states.length).toBe(before + 2);
+    expect(last()?.sbc?.snapshot.filledSlots).toBe(0);
+    card?.classList.add('hover');
+    await vi.advanceTimersByTimeAsync(600);
+    controller.stop();
+    expect(states.length).toBe(before + 2);
   });
 
   it('keeps the last snapshot but marks it stale (never fabricates) when a re-read fails', () => {

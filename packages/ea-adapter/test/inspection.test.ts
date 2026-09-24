@@ -1,4 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { FIXTURES_ROOT } from '@fc/ea-fixtures';
 import { InspectionReportSchema, type InspectionReport } from '@fc/contracts';
 import { createEaWebAdapter, fc27FixtureProfile, findSensitiveContent, inspectCurrentScreen, reportToFixtureHtml } from '../src/index.js';
 import { LIVE_URL, loadFc27, loadHtml } from './helpers.js';
@@ -46,7 +49,9 @@ describe('inspection mode', () => {
     expect(report.sbc.slots).toEqual({ total: 11, filled: null, locked: 0 });
     expect(report.sbc.pitchFound).toBe(true);
     expect(report.sbc.slotDetails).toHaveLength(11);
-    expect(report.meta.signatures['sbc:slotFilled']).toBe('disabled');
+    expect(report.meta.signatures['sbc:slotFilled']).toBe('verified');
+    // Synthetic fc27 markup lacks the live occupancy classes -> UNKNOWN, never guessed.
+    expect(new Set(report.sbc.slotDetails.map((s) => s.occupancy))).toEqual(new Set(['UNKNOWN']));
     expect(report.sbc.requirementRows.map((r) => r.interpretedAs)).toEqual([
       'MIN_SQUAD_RATING', 'MIN_COUNT', 'MIN_CHEMISTRY', 'MIN_COUNT', 'MAX_SAME', 'MIN_UNIQUE', 'MIN_COUNT', 'SQUAD_SIZE',
     ]);
@@ -198,5 +203,18 @@ describe('per-slot evidence (empty vs filled pitch)', () => {
     loadHtml(reportToFixtureHtml(b, 'pair-b'));
     const replay = inspect();
     expect(replay.sbc.slotDetails.map((s) => s.structuralFingerprint)).toEqual(b.sbc.slotDetails.map((s) => s.structuralFingerprint));
+  });
+});
+
+describe('per-slot occupancy in reports of the real captures', () => {
+  it.each([
+    ['fc27-sbc-bronze11-empty.en', 'EEEEEEEEEEE', 0],
+    ['fc27-sbc-bronze11-one-player.en', 'EEEEEEEEEFE', 1],
+  ] as const)('%s -> %s', (name, states, filled) => {
+    loadHtml(readFileSync(join(FIXTURES_ROOT, 'captured', `${name}.html`), 'utf8'));
+    const report = inspect();
+    expect(report.sbc.slotDetails.map((s) => (s.occupancy ?? '?')[0]).join('')).toBe(states);
+    expect(report.sbc.slots).toEqual({ total: 11, filled, locked: 0 });
+    expect(findSensitiveContent(JSON.stringify(report))).toEqual([]);
   });
 });

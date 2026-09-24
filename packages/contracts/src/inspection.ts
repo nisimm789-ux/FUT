@@ -82,6 +82,8 @@ export const InspectionSlotSchema = z
     /** What the ACTIVE profile concludes (null = no signature / unknown). */
     lockedBySignature: z.boolean().nullable(),
     filledBySignature: z.boolean().nullable(),
+    /** Tri-state occupancy per the active profile (absent in reports from adapter < 0.3). */
+    occupancy: z.enum(['EMPTY', 'FILLED', 'UNKNOWN', 'LOCKED']).optional(),
     /** Class tokens on the slot element itself (lowercased, id-like tokens dropped). */
     classes: z.array(Token).max(24),
     /** Class tokens found on descendants, with occurrence counts. */

@@ -58,28 +58,84 @@ export function extractRequirementRows(root: Element, profile: SbcProfile): Requ
   });
 }
 
+export type SlotOccupancy = 'EMPTY' | 'FILLED' | 'UNKNOWN' | 'LOCKED';
+
 export interface SlotSummary {
   total: number;
   active: number;
-  /** null = the profile has no verified occupancy signature (unknown, not zero). */
+  /**
+   * Number of filled active slots, or null when occupancy of ANY active slot is
+   * unknown (or the profile has no occupancy signature). Never a partial count.
+   */
   filled: number | null;
   locked: number;
+  /** Per-slot state in DOM order. */
+  states: SlotOccupancy[];
+  warnings: string[];
+}
+
+type SlotsProfile = NonNullable<SbcProfile['slots']>;
+
+const matchesOrContains = (el: Element, selector: string) => el.matches(selector) || el.querySelector(selector) !== null;
+
+/**
+ * Classifies one slot. Evidence-based tri-state when the profile has an
+ * `occupancy` signature; legacy binary `filled` selector otherwise (fixtures);
+ * UNKNOWN when neither exists or the signals are missing/contradictory.
+ */
+export function classifySlot(el: Element, slots: SlotsProfile): { state: SlotOccupancy; warning: string | null } {
+  if (slots.locked && matchesOrContains(el, slots.locked)) return { state: 'LOCKED', warning: null };
+  if (slots.occupancy) {
+    const { container, filledClass, emptyClass } = slots.occupancy;
+    const containers = el.querySelectorAll(container);
+    if (containers.length !== 1) return { state: 'UNKNOWN', warning: containers.length > 1 ? 'multiple occupancy containers in slot' : null };
+    const node = containers[0];
+    const filled = node?.classList.contains(filledClass) ?? false;
+    const empty = node?.classList.contains(emptyClass) ?? false;
+    if (filled && empty) return { state: 'UNKNOWN', warning: `contradictory occupancy classes (${filledClass} + ${emptyClass})` };
+    if (filled) return { state: 'FILLED', warning: null };
+    if (empty) return { state: 'EMPTY', warning: null };
+    return { state: 'UNKNOWN', warning: null };
+  }
+  if (slots.filled) return { state: matchesOrContains(el, slots.filled) ? 'FILLED' : 'EMPTY', warning: null };
+  return { state: 'UNKNOWN', warning: null };
 }
 
 export function readSlots(doc: Document, profile: SbcProfile): SlotSummary | null {
   if (!profile.pitchRoot || !profile.slots) return null;
   const pitch = doc.querySelector(profile.pitchRoot);
   if (!pitch) return null;
-  const { slot, filled, locked } = profile.slots;
-  const matchesOrContains = (el: Element, selector: string) => el.matches(selector) || el.querySelector(selector) !== null;
-  let lockedCount = 0;
-  let filledCount = 0;
-  const slots = [...pitch.querySelectorAll(slot)];
-  for (const el of slots) {
-    if (locked && matchesOrContains(el, locked)) lockedCount += 1;
-    else if (filled && matchesOrContains(el, filled)) filledCount += 1;
-  }
-  return { total: slots.length, active: slots.length - lockedCount, filled: filled ? filledCount : null, locked: lockedCount };
+  const slotsProfile = profile.slots;
+  const warnings = new Set<string>();
+  const states = [...pitch.querySelectorAll(slotsProfile.slot)].map((el, index) => {
+    const { state, warning } = classifySlot(el, slotsProfile);
+    if (warning) warnings.add(`slot ${index}: ${warning}`);
+    return state;
+  });
+  const locked = states.filter((s) => s === 'LOCKED').length;
+  const active = states.filter((s) => s !== 'LOCKED');
+  const anyUnknown = active.some((s) => s === 'UNKNOWN');
+  return {
+    total: states.length,
+    active: active.length,
+    filled: anyUnknown ? null : active.filter((s) => s === 'FILLED').length,
+    locked,
+    states,
+    warnings: [...warnings],
+  };
+}
+
+/**
+ * True when occupancy looks mid-transition: some active slots classify cleanly
+ * while others are UNKNOWN (EA swapping a card in/out). A pitch where NO slot
+ * classifies is a structural mismatch, not a transition, and is not "unsettled".
+ * Observation waits (once, bounded) for the DOM to settle before re-reading.
+ */
+export function slotsUnsettled(doc: Document, profile: SbcProfile): boolean {
+  const summary = readSlots(doc, profile);
+  if (!summary) return false;
+  const active = summary.states.filter((s) => s !== 'LOCKED');
+  return active.some((s) => s === 'UNKNOWN') && active.some((s) => s === 'EMPTY' || s === 'FILLED');
 }
 
 /** Cheap fingerprint of everything the SBC reader depends on. */
@@ -87,9 +143,10 @@ export function sbcFingerprint(doc: Document, profile: SbcProfile): string | nul
   const root = doc.querySelector(profile.requirementsRoot);
   if (!root) return null;
   const rows = extractRequirementRows(root, profile).map((r) => `${normalizeText(r.text)}|${r.completed}|${r.assets.map((a) => a.src).join(',')}`);
-  // Occupancy participates only when the profile has a filled signature; an
-  // unknown (null) occupancy can therefore never cause a false state change.
-  const slots = readSlots(doc, profile);
+  // Verified per-slot occupancy participates; profiles without an occupancy
+  // signature contribute only constant UNKNOWN states (no false changes).
+  const summary = readSlots(doc, profile);
+  const slots = summary && { total: summary.total, locked: summary.locked, states: summary.states };
   const name = profile.name ? (doc.querySelector(profile.name)?.textContent ?? '').trim() : '';
   const attrs = profile.structural
     ? [profile.structural.challengeIdAttr, profile.structural.squadSizeAttr].map((a) => root.getAttribute(a) ?? '').join('|')

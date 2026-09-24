@@ -445,6 +445,25 @@ input values, password fields, storage access, `<script>` outside the dev site).
   Tests that need known occupancy use `fc27FixtureProfile` (fixture-only, not a
   default profile).
 
+- **2026-09-24, capture pair (same SBC: all 11 slots empty vs exactly one
+  player in slot 9)** — diff showed exactly one slot changing. Each slot has
+  two direct `.item` children (chemistry-points view and the card); the card
+  is the single `:scope > .item.player`. Empty: `ut-item-loading` (+`empty`);
+  filled: `ut-item-loaded` (+`draggable`, `animatereplace`). A filled card still
+  contains an `.empty` *descendant*, and every slot contains `.ut-item-view`,
+  so neither is used. Rule (tri-state, `fc27LiveProfile.sbc.slots.occupancy`):
+  exactly one container; `ut-item-loaded` → FILLED; `ut-item-loading` without
+  `ut-item-loaded` → EMPTY; none, both (warning), or ≠1 container → UNKNOWN.
+  `filledSlots` is an integer only if every active slot is known, otherwise
+  `null`. `sbc:slotFilled` is now `verified`; the profile as a whole is not.
+  Both captures are regression fixtures in `fixtures/ea/captured/` with
+  `.expect.json` (0 filled / slot 9 filled).
+  Observation: verified per-slot states are part of the SBC fingerprint again.
+  If a pitch is *partly* classifiable (EA mid-swap), the scoped re-check is
+  postponed once by 400 ms (`unstableDeferrals` counter); if still ambiguous
+  it reads once and reports `null`. A pitch where no slot classifies is a
+  structural mismatch, not a transition, and reads immediately. No polling.
+
 ### Known FC 27 uncertainties (need live evidence)
 
 1. Every `fc27-live` selector: shell probe, view classes, tab-bar icon classes,
@@ -455,8 +474,8 @@ input values, password fields, storage access, `<script>` outside the dev site).
 4. Whether requirement rows expose nation/league/club badges with numeric ids
    in their image URLs, and the URL shape.
 5. Whether the DOM exposes any stable challenge/set id (currently local fingerprint).
-6. Slot occupancy signature (pending the empty vs one-player capture pair),
-   and whether SBCs with fewer than 11 players lock or remove pitch slots.
+6. Locked/unavailable slots in SBCs with fewer than 11 players
+   (`sbc:slotLocked` unverified); occupancy with special card designs.
 7. Whether some requirement data exists only in EA's JS view models. If so,
    the only acceptable route is a separately reviewed, read-only MAIN-world
    bridge (ADR-006 lists the conditions); it is **not** implemented.

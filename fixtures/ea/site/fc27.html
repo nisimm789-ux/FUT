@@ -25,13 +25,15 @@
   <button id="noise">Animate unrelated DOM (x50)</button>
   <button id="rerender">Re-render view (same state)</button>
   <button id="remove">Remove requirements container</button>
+  <button id="occupy">Toggle player in slot 9 (captured pitch)</button>
 </div>
 <div id="app"></div>
 <script type="module">
   // SPA emulation: the document never reloads. Screen swaps replace the app
   // subtree; the controls mutate the CURRENT screen in place so same-page
   // observation, fingerprinting and debouncing can be exercised by hand.
-  const pages = ['sbc-challenge.en', 'sbc-challenge-live-empty-pitch.en', 'sbc-challenge.de', 'sbc-challenge.fr', 'sbc-challenge.es', 'sbc-challenge-supported.en',
+  // "captured/..." pages are minimal fixtures converted from REAL sanitized live reports.
+  const pages = ['captured/fc27-sbc-bronze11-empty.en', 'captured/fc27-sbc-bronze11-one-player.en', 'sbc-challenge.en', 'sbc-challenge-live-empty-pitch.en', 'sbc-challenge.de', 'sbc-challenge.fr', 'sbc-challenge.es', 'sbc-challenge-supported.en',
     'sbc-challenge-unknown.en', 'sbc-challenge-seven.en', 'sbc-challenge-no-requirements', 'sbc-hub', 'home', 'squads', 'store',
     'pack-results', 'transfers', 'club', 'evolutions', 'unknown'];
   const select = document.getElementById('page');
@@ -39,7 +41,8 @@
   const app = document.getElementById('app');
   const parser = new DOMParser();
   async function show(page) {
-    const doc = parser.parseFromString(await (await fetch(`../fc27/${page}.html`)).text(), 'text/html');
+    const path = page.startsWith('captured/') ? `../${page}.html` : `../fc27/${page}.html`;
+    const doc = parser.parseFromString(await (await fetch(path)).text(), 'text/html');
     document.documentElement.lang = doc.documentElement.getAttribute('lang') ?? '';
     const root = doc.querySelector('.ut-root-view');
     app.replaceChildren(document.importNode(root, true));
@@ -64,6 +67,15 @@
   document.getElementById('rerender').onclick = () => {
     const view = app.querySelector('.ut-sbc-challenge-requirements-view');
     if (view) view.replaceWith(view.cloneNode(true));
+  };
+  // Mirrors the live evidence: empty = .item.player.ut-item-loading, filled = .item.player.ut-item-loaded.
+  document.getElementById('occupy').onclick = () => {
+    const card = app.querySelectorAll('.ut-squad-slot-view')[9]?.querySelector(':scope > .item.player');
+    if (!card) return;
+    const filled = card.classList.contains('ut-item-loaded');
+    card.classList.toggle('ut-item-loaded', !filled);
+    card.classList.toggle('ut-item-loading', filled);
+    card.classList.toggle('empty', filled);
   };
   document.getElementById('remove').onclick = () => app.querySelector('.ut-sbc-challenge-requirements-view')?.remove();
   window.addEventListener('popstate', () => show(location.hash.replace('#/', '') || 'sbc-challenge.en'));

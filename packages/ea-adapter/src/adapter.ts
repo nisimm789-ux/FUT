@@ -19,6 +19,7 @@ import { DEFAULT_PROFILES, selectProfile, type EaAdapterProfile } from './profil
 import { resolveProvenance } from './provenance.js';
 import { createClubReader } from './readers/club-reader.js';
 import { createSbcReader } from './readers/sbc-reader.js';
+import { slotsUnsettled } from './readers/sbc-rows.js';
 import {
   ReadFailure,
   unsupportedReader,
@@ -203,6 +204,7 @@ export function createEaWebAdapter(deps: EaWebAdapterDeps): EaWebAdapter {
       fingerprint,
       onContextChange: handlers.onContextChange,
       onScopeChange: handlers.onScopeChange ?? (() => undefined),
+      isSettled: (kind) => !(kind === 'SBC_CHALLENGE' && profile?.sbc && slotsUnsettled(deps.document, profile.sbc)),
       ...(deps.MutationObserverCtor && { MutationObserverCtor: deps.MutationObserverCtor }),
     });
 

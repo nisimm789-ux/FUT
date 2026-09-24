@@ -22,7 +22,7 @@ import type { EaAdapterProfile } from './types.js';
 export const fc27LiveProfile: EaAdapterProfile = {
   id: 'fc27-live',
   fcVersion: 'FC27',
-  profileVersion: '0.2.0',
+  profileVersion: '0.3.0',
   verified: false,
   // Evidence from the first sanitized live report (2026-09-24, en, one SBC with
   // "Player Quality: Exactly Bronze" + "Number of Players in the Squad: 11"):
@@ -35,10 +35,11 @@ export const fc27LiveProfile: EaAdapterProfile = {
     'sbc:slot': 'verified',
     'requirement:SQUAD_SIZE': 'verified',
     'requirement:PLAYER_QUALITY': 'verified',
-    // `.ut-item-view:not(.empty)` counted all 11 slots of an EMPTY live pitch as
-    // filled: empty slots also contain .ut-item-view and do not use .empty.
-    // Disabled until an empty-vs-one-player capture pair proves a signature.
-    'sbc:slotFilled': 'disabled',
+    // Verified 2026-09-24 from a live capture pair of the same SBC (all 11 slots
+    // empty vs exactly one player in slot 9), both committed as regression
+    // fixtures under fixtures/ea/captured/. The earlier `.ut-item-view:not(.empty)`
+    // guess was refuted (it counted an empty pitch as 11/11 filled).
+    'sbc:slotFilled': 'verified',
     'sbc:slotLocked': 'unverified',
     'sbc:challengeName': 'unverified',
     'requirement:other-types': 'unverified',
@@ -69,8 +70,18 @@ export const fc27LiveProfile: EaAdapterProfile = {
     requirementRow: 'li',
     completedClasses: ['complete', 'completed', 'is-complete'],
     pitchRoot: '.ut-squad-pitch-view',
-    // No `filled` signature: occupancy is reported as unknown (see signatures).
-    slots: { slot: '.ut-squad-slot-view', locked: '.locked, .disabled' },
+    slots: {
+      slot: '.ut-squad-slot-view',
+      locked: '.locked, .disabled',
+      // Live evidence: each slot has exactly one direct `.item.player` child
+      // (the other direct `.item` is the chemistry-points view).
+      //   empty : .item.player.ut-item-loading (+ .empty, .droppable)
+      //   filled: .item.player.ut-item-loaded  (+ .draggable, .animatereplace)
+      // Deliberately NOT used as signals: .ut-item-view (present in both),
+      // `.empty` on descendants (a filled card still has one inside), the
+      // pedestal's state-positioned class and `draggable` alone.
+      occupancy: { container: ':scope > .item.player', filledClass: 'ut-item-loaded', emptyClass: 'ut-item-loading' },
+    },
     name: '.ut-navigation-bar-view h1',
     assetIdPatterns: {
       nation: /\/flags?\/(?:[a-z0-9_-]+\/)*(\d+)\.(?:png|webp|jpg)(?:$|\?)/,

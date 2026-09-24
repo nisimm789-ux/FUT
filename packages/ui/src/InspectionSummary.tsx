@@ -25,8 +25,16 @@ export function InspectionSummary({ report }: { report: InspectionReport }) {
         <dt>SBC root</dt>
         <dd>
           {report.sbc.rootFound ? 'found' : 'not found'}
-          {report.sbc.slots ? ` · slots ${report.sbc.slots.total} (filled ${report.sbc.slots.filled}, locked ${report.sbc.slots.locked})` : ''}
+          {report.sbc.slots ? ` · slots ${report.sbc.slots.total} (filled ${report.sbc.slots.filled ?? 'unknown'}, locked ${report.sbc.slots.locked})` : ''}
         </dd>
+        {report.sbc.slotDetails.length > 0 && (
+          <>
+            <dt>Slot states</dt>
+            <dd data-testid="slot-states">
+              {report.sbc.slotDetails.map((s) => `${s.index}:${s.occupancy ?? (s.filledBySignature === null ? 'UNKNOWN' : s.filledBySignature ? 'FILLED' : 'EMPTY')}`).join(' ')}
+            </dd>
+          </>
+        )}
         <dt>Candidates</dt>
         <dd>{report.candidates.length} requirement-like list(s)</dd>
         <dt>Reader</dt>

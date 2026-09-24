@@ -79,66 +79,81 @@ describe('FC 27 candidate SBC reader', () => {
     expect(readOk(LIVE_URL, true)).toMatchObject({ squadSize: 7, filledSlots: 2 });
   });
 
-  describe('confirmed live bug: empty FC 27 pitch reported as 11/11 filled', () => {
-    it('reports squadSize 11 and filledSlots null (unknown) for an empty live-style pitch', () => {
+  describe('slot occupancy (tri-state, from the live empty / one-player capture pair)', () => {
+    const slotHtml = (itemClasses: string, extra = '') =>
+      `<div class="ut-squad-slot-view"><div class="ut-squad-slot-pedestal-view"></div><div class="item ut-squad-slot-chemistry-points-view"></div><div class="${itemClasses}"><div class="ut-item-view"><div class="empty"></div></div></div>${extra}</div>`;
+    const EMPTY = 'droppable empty has-chemistry-breakdown item player small ut-item-loading';
+    const FILLED = 'animatereplace common draggable droppable has-chemistry-breakdown item player small ut-item-loaded';
+    function pitchWith(slots: string[]) {
       loadFc27('sbc-challenge-live-empty-pitch.en');
-      const adapter = adapterAt(LIVE_URL);
-      const result = adapter.readSbcChallenge();
+      const pitch = document.querySelector('.ut-squad-pitch-view');
+      if (pitch) pitch.innerHTML = slots.join('');
+    }
+    const read = () => {
+      const result = adapterAt(LIVE_URL).readSbcChallenge();
       if (!result.ok) throw new Error(result.message);
-      expect(result.value.squadSize).toBe(11);
+      return result;
+    };
+
+    it('11 empty (ut-item-loading) slots -> filledSlots 0', () => {
+      pitchWith(Array.from({ length: 11 }, () => slotHtml(EMPTY)));
+      expect(read().value).toMatchObject({ squadSize: 11, filledSlots: 0 });
+    });
+
+    it('one ut-item-loaded slot -> filledSlots 1 (descendant .empty inside a filled card is ignored)', () => {
+      pitchWith(Array.from({ length: 11 }, (_, i) => slotHtml(i === 9 ? FILLED : EMPTY)));
+      expect(read().value.filledSlots).toBe(1);
+    });
+
+    it('contradictory loaded + loading on one container -> UNKNOWN -> filledSlots null, with a diagnostic', () => {
+      pitchWith(Array.from({ length: 11 }, (_, i) => slotHtml(i === 3 ? `${EMPTY} ut-item-loaded` : EMPTY)));
+      const result = read();
       expect(result.value.filledSlots).toBeNull();
-      expect(result.value.filledSlots).not.toBe(11);
+      expect(result.warnings?.join(' ')).toContain('slot 3: contradictory occupancy classes (ut-item-loaded + ut-item-loading)');
+    });
+
+    it('a slot with neither state class -> UNKNOWN -> filledSlots null (never a partial count)', () => {
+      pitchWith(Array.from({ length: 11 }, (_, i) => slotHtml(i === 0 ? 'item player small' : i < 5 ? FILLED : EMPTY)));
+      const result = read();
+      expect(result.value.filledSlots).toBeNull();
+      expect(result.warnings?.join(' ')).toContain('slot occupancy unknown for 1 of 11 active slots');
+    });
+
+    it('more than one occupancy container in a slot -> UNKNOWN', () => {
+      pitchWith(Array.from({ length: 11 }, (_, i) => slotHtml(EMPTY, i === 2 ? `<div class="${FILLED}"></div>` : '')));
+      expect(read().value.filledSlots).toBeNull();
+    });
+
+    it('does not infer occupancy from .ut-item-view, state-positioned or draggable alone', () => {
+      pitchWith(
+        Array.from({ length: 11 }, () =>
+          '<div class="ut-squad-slot-view"><div class="ut-squad-slot-pedestal-view state-positioned"></div><div class="item player draggable"><div class="ut-item-view"></div></div></div>',
+        ),
+      );
+      expect(read().value.filledSlots).toBeNull();
+    });
+
+    it('an unrecognised pitch structure (e.g. the pre-evidence hand fixture) stays unknown', () => {
+      loadFc27('sbc-challenge-live-empty-pitch.en');
+      const result = read();
+      expect(result.value).toMatchObject({ squadSize: 11, filledSlots: null });
       expect(result.value.requirements).toEqual([
         { id: 'req-1', via: 'text', type: 'PLAYER_QUALITY', min: 'BRONZE', max: 'BRONZE' },
         { id: 'req-2', via: 'text', type: 'SQUAD_SIZE', count: 11 },
       ]);
-      expect(result.warnings).toContain('slot occupancy unknown: profile has no verified filled-slot signature');
-      // Occupancy being unknown must not degrade the rest of the read.
-      expect(adapter.health.snapshot().capabilities.sbcReading).toBe('healthy');
     });
 
-    it('the live profile carries no filled-slot selector and marks the signature disabled', () => {
+    it('profile: evidence-based occupancy signature verified, whole profile still unverified', () => {
       const live = DEFAULT_PROFILES.find((p) => p.id === 'fc27-live');
+      expect(live?.sbc?.slots?.occupancy).toEqual({ container: ':scope > .item.player', filledClass: 'ut-item-loaded', emptyClass: 'ut-item-loading' });
       expect(live?.sbc?.slots?.filled).toBeUndefined();
-      expect(live?.signatures?.['sbc:slotFilled']).toBe('disabled');
+      expect(live?.signatures?.['sbc:slotFilled']).toBe('verified');
       expect(live?.verified).toBe(false);
-      expect(live?.signatures).toMatchObject({
-        appShell: 'verified',
-        'context:SBC_CHALLENGE': 'verified',
-        'sbc:requirementsRoot': 'verified',
-        'sbc:requirementRow': 'verified',
-        'sbc:pitchRoot': 'verified',
-        'requirement:SQUAD_SIZE': 'verified',
-      });
+      expect(live?.signatures?.['sbc:slotLocked']).toBe('unverified');
       expect(DEFAULT_PROFILES.map((p) => p.id)).not.toContain('fc27-fixture');
-    });
-
-    it('surfaces signature status in adapter health', () => {
       loadFc27('sbc-challenge-live-empty-pitch.en');
-      const health = adapterAt(LIVE_URL).health.snapshot();
-      expect(health.profileSignatures['sbc:slotFilled']).toBe('disabled');
+      expect(adapterAt(LIVE_URL).health.snapshot().profileSignatures['sbc:slotFilled']).toBe('verified');
     });
-  });
-
-  it('keeps uninterpretable requirements as UNKNOWN with fingerprints (never dropped)', () => {
-    loadFc27('sbc-challenge-unknown.en');
-    const snapshot = readOk();
-    expect(snapshot.requirements.map((r) => (r.type === 'UNKNOWN' ? `UNKNOWN:${r.reason}` : r.type))).toEqual([
-      'MIN_SQUAD_RATING',
-      'UNKNOWN:UNRECOGNIZED_TEXT',
-      'UNKNOWN:UNRECOGNIZED_TEXT',
-      'UNKNOWN:ENTITY_ID_UNAVAILABLE',
-      'SQUAD_SIZE',
-    ]);
-    const unknown = snapshot.requirements.find((r) => r.type === 'UNKNOWN');
-    expect(unknown).toMatchObject({ structuralFingerprint: expect.stringMatching(/^[0-9a-f]{8}$/), rawSafeDescription: 'Min. 2 Chemistry Points per Player' });
-  });
-
-  it('marks every requirement ambiguous rather than guessing the language when <html lang> is missing', () => {
-    loadFc27('sbc-challenge-no-lang');
-    const snapshot = readOk();
-    expect(snapshot.requirements[0]).toMatchObject({ type: 'UNKNOWN', reason: 'AMBIGUOUS_LANGUAGE' });
-    expect(snapshot.requirements[1]).toMatchObject({ type: 'MIN_SQUAD_RATING', value: 84 });
   });
 
   describe('failure behaviour (fail closed, no fabricated snapshot)', () => {

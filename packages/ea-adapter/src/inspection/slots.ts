@@ -1,16 +1,12 @@
 import type { InspectionSlot } from '@fc/contracts';
 import { fnv1a } from '../hash.js';
 import type { SbcProfile } from '../profiles/types.js';
+import { classifySlot } from '../readers/sbc-rows.js';
 import { SAFE_CLASS_TOKEN, assetOf, describeNode } from './node.js';
 
 const OPAQUE = new Set(['input', 'textarea', 'select', 'option', 'script', 'style', 'noscript', 'template', 'iframe']);
 /** data-* names whose short token values are structural (never names/ids). */
 const STRUCTURAL_DATA_NAMES = /^data-(index|slot|slot-index|position|pos|state|status|type|kind|role|variant|size|empty|filled|locked|active|selected|disabled)$/;
-
-function matchesOrContains(el: Element, selector: string | undefined): boolean | null {
-  if (!selector) return null;
-  return el.matches(selector) || el.querySelector(selector) !== null;
-}
 
 /** Structure-only signature of an element subtree: tags, safe classes, nesting. */
 function structureSignature(el: Element, depth = 0): string {
@@ -80,12 +76,14 @@ export function describeSlots(doc: Document, profile: SbcProfile): { pitchFound:
     collectAttrs(slot);
     walk(slot, 1);
 
-    const locked = matchesOrContains(slot, profile.slots?.locked);
-    const filled = matchesOrContains(slot, profile.slots?.filled);
+    const slotsProfile = profile.slots;
+    const { state } = slotsProfile ? classifySlot(slot, slotsProfile) : { state: 'UNKNOWN' as const };
+    const hasOccupancySignature = Boolean(slotsProfile?.occupancy ?? slotsProfile?.filled);
     return {
       index,
-      lockedBySignature: locked,
-      filledBySignature: filled === null ? null : !locked && filled,
+      lockedBySignature: slotsProfile?.locked ? state === 'LOCKED' : null,
+      filledBySignature: hasOccupancySignature && state !== 'UNKNOWN' ? state === 'FILLED' : null,
+      occupancy: state,
       classes: [...new Set([...slot.classList].map((c) => c.toLowerCase()).filter(SAFE_CLASS_TOKEN))].sort().slice(0, 24),
       descendantClasses: [...descendantClasses.entries()].sort(([a], [b]) => a.localeCompare(b)).slice(0, 64).map(([className, count]) => ({ className, count })),
       tagCounts,

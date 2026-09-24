@@ -2,7 +2,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { FIXTURES_ROOT } from '@fc/ea-fixtures';
-import { createEaWebAdapter, fc27LiveProfile } from '../src/index.js';
+import { createEaWebAdapter, fc27LiveProfile, readSlots } from '../src/index.js';
 import { LIVE_URL, loadHtml } from './helpers.js';
 
 /**
@@ -17,6 +17,9 @@ interface Expectation {
   context: string;
   requirementTypes?: string[];
   squadSize?: number;
+  /** null = occupancy must be reported as unknown. */
+  filledSlots?: number | null;
+  slotStates?: string[];
 }
 
 describe('captured live fixtures', () => {
@@ -37,6 +40,13 @@ describe('captured live fixtures', () => {
       if (!result.ok) throw new Error(`${result.category}: ${result.message}`);
       expect(result.value.requirements.map((r) => r.type)).toEqual(expected.requirementTypes);
       if (expected.squadSize !== undefined) expect(result.value.squadSize).toBe(expected.squadSize);
+      if (expected.filledSlots !== undefined) expect(result.value.filledSlots).toBe(expected.filledSlots);
+      expect(result.value.provenance).toBe('EA_WEB_LIVE');
+    }
+    if (expected.slotStates) {
+      const sbc = fc27LiveProfile.sbc;
+      if (!sbc) throw new Error('profile has no SBC selectors');
+      expect(readSlots(document, sbc)?.states).toEqual(expected.slotStates);
     }
   });
 });

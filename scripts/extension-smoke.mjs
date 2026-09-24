@@ -106,13 +106,13 @@ try {
   assert(fcState?.context.kind === 'SBC_CHALLENGE' && fcState.context.profileId === 'fc27-live', 'FC 27 structure detected as SBC_CHALLENGE by the fc27-live profile');
   assert(fcState.sbc?.snapshot.provenance === 'LOCAL_FIXTURE', 'localhost data is labelled LOCAL_FIXTURE, never EA_WEB_LIVE');
   assert(fcState.sbc.snapshot.requirements.length === 8 && fcState.sbc.snapshot.squadSize === 11, 'SBC read: 8 requirements, squad size 11');
-  assert(fcState.sbc.snapshot.filledSlots === null, 'live profile reports slot occupancy as unknown (null), never guessed');
+  assert(fcState.sbc.snapshot.filledSlots === null, 'synthetic markup without the live occupancy classes reports filledSlots null, never guessed');
 
   const rereadsBefore = fcState.perf.counters.rereads;
   await fc27.click('#fill');
   await fc27.waitForTimeout(500);
   fcState = (await stateOf('fc27-live')).state;
-  assert(fcState.perf.counters.rereads === rereadsBefore, 'placing a player causes no false re-read while occupancy is unverified');
+  assert(fcState.perf.counters.rereads === rereadsBefore, 'slot changes in unrecognised markup cause no false re-read');
   // Bump "Team Rating: Min. 84" -> 85: a meaningful change that alters the snapshot.
   await fc27.click('#rating');
   await fc27.waitForTimeout(500);
@@ -126,6 +126,23 @@ try {
   const afterNoise = (await stateOf('fc27-live')).state;
   assert((afterNoise?.perf.counters.rereads ?? fcState.perf.counters.rereads) === rereadsBefore + 1, 'unrelated DOM churn causes no re-read');
   console.log(`  i perf: ${JSON.stringify(fcState.perf.timings)}`);
+
+  // Real captured pitch (converted from live sanitized reports): verified occupancy.
+  await fc27.goto('http://localhost:4173/site/fc27.html#/captured/fc27-sbc-bronze11-empty.en');
+  await fc27.waitForTimeout(800);
+  fcState = (await stateOf('fc27-live')).state;
+  assert(fcState?.sbc?.snapshot.filledSlots === 0 && fcState.sbc.snapshot.squadSize === 11, 'captured empty pitch: squadSize 11, filledSlots 0');
+  const readsBeforeOccupy = fcState.perf.counters.rereads;
+  await fc27.click('#occupy');
+  await fc27.waitForTimeout(700);
+  fcState = (await stateOf('fc27-live')).state;
+  assert(fcState.sbc.snapshot.filledSlots === 1 && fcState.perf.counters.rereads === readsBeforeOccupy + 1, 'placing a player: one re-read, filledSlots 0 -> 1');
+  await fc27.click('#occupy');
+  await fc27.waitForTimeout(700);
+  fcState = (await stateOf('fc27-live')).state;
+  assert(fcState.sbc.snapshot.filledSlots === 0 && fcState.perf.counters.rereads === readsBeforeOccupy + 2, 'removing it: one re-read, filledSlots 1 -> 0');
+  await fc27.goto('http://localhost:4173/site/fc27.html#/sbc-challenge.en');
+  await fc27.waitForTimeout(800);
 
   const { tabId: fcTab } = await stateOf('fc27-live');
   const inspection = await worker.evaluate((tabId) => chrome.tabs.sendMessage(tabId, { type: 'INSPECT' }), fcTab);

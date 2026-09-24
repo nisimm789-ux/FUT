@@ -15,6 +15,13 @@ export interface ViewObserverOptions {
   onContextChange: (current: EaContextSnapshot, previous: EaContextSnapshot | null) => void;
   /** Same context, but its relevant structure changed meaningfully. */
   onScopeChange: (current: EaContextSnapshot) => void;
+  /**
+   * False while the relevant state is mid-transition (e.g. a card being swapped
+   * into a slot). The re-check is postponed ONCE by `settleMs`; if still
+   * unsettled then, the read proceeds and reports unknown values honestly.
+   */
+  isSettled?: (kind: EaContextKind) => boolean;
+  settleMs?: number;
   MutationObserverCtor?: typeof MutationObserver;
   rootDebounceMs?: number;
   scopeDebounceMs?: number;
@@ -44,6 +51,12 @@ export function observeView(options: ViewObserverOptions): () => void {
   let lastFingerprint: string | null = null;
   let stopped = false;
   let scopedObserver: MutationObserver | null = null;
+  let settleTimer: number | undefined;
+  let deferred = false;
+  const clearSettle = () => {
+    if (settleTimer !== undefined) win.clearTimeout(settleTimer);
+    settleTimer = undefined;
+  };
 
   const sameScopes = (next: Element[]) => next.length === scopes.length && next.every((el, i) => el === scopes[i]);
 
@@ -54,6 +67,7 @@ export function observeView(options: ViewObserverOptions): () => void {
     if (scopes.length === 0) return;
     scopedObserver = new Ctor(() => {
       perf.increment('scopedMutationBatches');
+      clearSettle();
       scopeTask.schedule();
     });
     for (const el of scopes) {
@@ -65,6 +79,14 @@ export function observeView(options: ViewObserverOptions): () => void {
 
   const checkScope = (burstStartedAt: number) => {
     if (stopped || !context) return;
+    clearSettle();
+    if (!deferred && options.isSettled && !options.isSettled(context.kind)) {
+      deferred = true;
+      perf.increment('unstableDeferrals');
+      settleTimer = win.setTimeout(() => checkScope(burstStartedAt), options.settleMs ?? 400);
+      return;
+    }
+    deferred = false;
     const fp = currentFingerprint();
     if (fp === null || fp === lastFingerprint) {
       perf.increment('fingerprintUnchanged');
@@ -115,6 +137,7 @@ export function observeView(options: ViewObserverOptions): () => void {
     stopped = true;
     rootTask.cancel();
     scopeTask.cancel();
+    clearSettle();
     rootObserver.disconnect();
     scopedObserver?.disconnect();
     win.removeEventListener('hashchange', onNavigation);
