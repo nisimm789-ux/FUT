@@ -18,11 +18,12 @@
     "dev:extension": "pnpm --filter @fc/extension run dev",
     "dev:api": "pnpm --filter @fc/api run dev",
     "fixtures:serve": "node fixtures/ea/serve.mjs",
-    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
+    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build:extension && pnpm build:extension:dev && pnpm verify:builds",
     "build:extension:dev": "pnpm --filter @fc/extension run build:dev",
     "smoke:extension": "node scripts/extension-smoke.mjs",
     "fixtures:from-report": "tsx scripts/report-to-fixture.ts",
-    "fixtures:generate": "node fixtures/ea/scripts/generate.mjs"
+    "fixtures:generate": "node fixtures/ea/scripts/generate.mjs",
+    "verify:builds": "node scripts/verify-builds.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

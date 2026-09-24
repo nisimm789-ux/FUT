@@ -111,10 +111,21 @@ describe('architecture boundaries', () => {
   it('inspection mode is reachable only from development builds of the content script', () => {
     const content = code(join(root, 'apps', 'extension', 'entrypoints', 'ea.content', 'index.tsx'));
     const inspectCall = content.indexOf('inspectCurrentScreen({');
-    const devGuard = content.indexOf('if (import.meta.env.DEV) {');
+    const devGuard = content.indexOf('if (__FCA_DEV_TOOLS__) {');
     expect(inspectCall).toBeGreaterThan(-1);
     expect(devGuard).toBeGreaterThan(-1);
     expect(devGuard).toBeLessThan(inspectCall);
+  });
+
+  it('developer tooling is gated by the explicit build flag, never import.meta.env.DEV (follows NODE_ENV)', () => {
+    const ext = join(root, 'apps', 'extension');
+    const offenders = [...sourceFiles(join(ext, 'entrypoints')), ...sourceFiles(join(ext, 'src'))].filter((f) => /import\.meta\.env\.DEV\b/.test(code(f)));
+    expect(offenders.map((f) => relative(root, f))).toEqual([]);
+    const config = code(join(ext, 'wxt.config.ts'));
+    expect(config).toMatch(/__FCA_DEV_TOOLS__: JSON\.stringify\(devTools\(env\.mode\)\)/);
+    expect(config).toMatch(/mode === 'development'/);
+    const panel = code(join(ext, 'entrypoints', 'sidepanel', 'App.tsx'));
+    expect(panel).toMatch(/\{__FCA_DEV_TOOLS__ && \(\s*<section className="fca-card" aria-label="Developer">/);
   });
 
   it('extension permissions stay minimal', async () => {

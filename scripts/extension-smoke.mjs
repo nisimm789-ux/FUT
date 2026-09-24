@@ -66,6 +66,8 @@ try {
   panel.on('pageerror', (e) => errors.push(`panel: ${e}`));
   await panel.setViewportSize({ width: 400, height: 1400 });
   await panel.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  assert((await panel.textContent('[data-testid="dev-build-badge"]'))?.includes('Inspection Mode'), 'DEV BUILD badge visible in the side panel header');
+  assert((await panel.getByRole('button', { name: 'Inspect Current EA Screen' }).count()) === 1, 'Developer section with "Inspect Current EA Screen" is present');
   await panel.getByRole('button', { name: /Run bundled demo/ }).click();
   await panel.waitForSelector('[data-testid="solve-status"]');
   assert((await panel.textContent('[data-testid="solve-status"]')) === 'SOLVED', 'side panel renders a SOLVED preview');

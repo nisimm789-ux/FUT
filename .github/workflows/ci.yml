@@ -23,4 +23,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm build:extension
+      # Dev tooling must not depend on NODE_ENV: build the dev variant with NODE_ENV=production.
       - run: pnpm build:extension:dev
+        env:
+          NODE_ENV: production
+      - run: pnpm verify:builds

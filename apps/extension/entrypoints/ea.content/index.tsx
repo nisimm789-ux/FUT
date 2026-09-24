@@ -41,9 +41,9 @@ export default defineContentScript({
         controller.refresh();
         return undefined;
       }
-      // Inspection mode exists only in development builds; in production this
-      // branch is compiled out entirely (import.meta.env.DEV is a constant).
-      if (import.meta.env.DEV) {
+      // Inspection mode exists only in development-mode builds; in production
+      // __FCA_DEV_TOOLS__ is the literal `false` and this branch is compiled out.
+      if (__FCA_DEV_TOOLS__) {
         sendResponse(inspectCurrentScreen({ adapter, document, url: location.href, extensionVersion, now: Date.now() }));
       } else {
         sendResponse({ ok: false, reason: 'DISABLED_IN_PRODUCTION', details: [] });

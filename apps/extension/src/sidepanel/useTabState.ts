@@ -15,7 +15,7 @@ export function useActiveTabState(): { tabId: number | null; state: TabState | n
   useEffect(() => {
     // Development builds only: ?tabId=N pins the panel to a tab (used by the smoke test,
     // which renders the panel page in its own tab).
-    const pinned = import.meta.env.DEV ? Number(new URLSearchParams(location.search).get('tabId')) : NaN;
+    const pinned = __FCA_DEV_TOOLS__ ? Number(new URLSearchParams(location.search).get('tabId')) : NaN;
     if (Number.isInteger(pinned) && pinned > 0) {
       setTabId(pinned);
       return undefined;

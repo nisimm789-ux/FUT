@@ -27,6 +27,7 @@ pnpm check                 # typecheck + lint + tests + production extension bui
 | `pnpm test` | Vitest: contracts, domain, solver (incl. property tests), adapter fixtures, UI, extension core, API, architecture |
 | `pnpm build:extension` | Production build → `apps/extension/.output/chrome-mv3` (EA hosts only) |
 | `pnpm build:extension:dev` | Dev build → `apps/extension/.output/chrome-mv3-dev` (also matches `http://localhost:4173`) |
+| `pnpm verify:builds` | Asserts the dev build exposes Inspection Mode and the production build does not |
 | `pnpm dev:extension` | WXT dev mode with hot reload |
 | `pnpm fixtures:serve` | Synthetic EA-like SPA at http://localhost:4173/site/ |
 | `pnpm smoke:extension` | Loads the dev build into Chromium and drives the fixture (needs a Playwright Chromium, or set `CHROMIUM_PATH`) |
@@ -39,7 +40,11 @@ pnpm check                 # typecheck + lint + tests + production extension bui
 1. `pnpm build:extension:dev`
 2. `pnpm fixtures:serve`
 3. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**,
-   and select `apps/extension/.output/chrome-mv3-dev`.
+   and select `apps/extension/.output/chrome-mv3-dev`. The development build is
+   named **FC Assistant (DEV)** and its side panel shows a purple
+   **DEV BUILD · Inspection Mode** badge plus a **Developer** section. Developer
+   tooling is controlled by the compile-time flag `__FCA_DEV_TOOLS__`, which is
+   derived from `--mode development`, never from `NODE_ENV`.
 4. Open http://localhost:4173/site/. The **⚡ Assistant** button appears at the bottom right.
 5. Click **Club**, then **SBC Challenge** in the fixture nav (SPA navigation, no reload).
 6. Click **⚡ Assistant** (or the toolbar icon). The side panel shows the detected

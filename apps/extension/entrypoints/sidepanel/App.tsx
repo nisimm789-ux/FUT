@@ -114,6 +114,11 @@ export function App() {
     <main>
       <h1>
         ⚡ FC Assistant <small>read-only</small>
+        {__FCA_DEV_TOOLS__ && (
+          <span className="fca-pill fca-dev-badge" data-testid="dev-build-badge">
+            DEV BUILD · Inspection Mode
+          </span>
+        )}
       </h1>
       <SourceBanner state={state} />
       <ContextCard context={state?.context ?? null} />
@@ -168,7 +173,7 @@ export function App() {
       </section>
       {solve && <SolutionView result={solve.result} items={solve.items} />}
 
-      {import.meta.env.DEV && (
+      {__FCA_DEV_TOOLS__ && (
         <section className="fca-card" aria-label="Developer">
           <h2>Developer</h2>
           <div className="row">
