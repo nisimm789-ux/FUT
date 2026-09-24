@@ -22,8 +22,28 @@ import type { EaAdapterProfile } from './types.js';
 export const fc27LiveProfile: EaAdapterProfile = {
   id: 'fc27-live',
   fcVersion: 'FC27',
-  profileVersion: '0.1.0',
+  profileVersion: '0.2.0',
   verified: false,
+  // Evidence from the first sanitized live report (2026-09-24, en, one SBC with
+  // "Player Quality: Exactly Bronze" + "Number of Players in the Squad: 11"):
+  signatures: {
+    appShell: 'verified',
+    'context:SBC_CHALLENGE': 'verified',
+    'sbc:requirementsRoot': 'verified',
+    'sbc:requirementRow': 'verified',
+    'sbc:pitchRoot': 'verified',
+    'sbc:slot': 'verified',
+    'requirement:SQUAD_SIZE': 'verified',
+    'requirement:PLAYER_QUALITY': 'verified',
+    // `.ut-item-view:not(.empty)` counted all 11 slots of an EMPTY live pitch as
+    // filled: empty slots also contain .ut-item-view and do not use .empty.
+    // Disabled until an empty-vs-one-player capture pair proves a signature.
+    'sbc:slotFilled': 'disabled',
+    'sbc:slotLocked': 'unverified',
+    'sbc:challengeName': 'unverified',
+    'requirement:other-types': 'unverified',
+    'context:other': 'unverified',
+  },
   live: true,
   probe: (doc) => doc.querySelector('.ut-root-view, .ut-tab-bar-view, .ut-navigation-bar-view') !== null,
   // The Web App URL does not track in-app navigation, so no route rules:
@@ -49,7 +69,8 @@ export const fc27LiveProfile: EaAdapterProfile = {
     requirementRow: 'li',
     completedClasses: ['complete', 'completed', 'is-complete'],
     pitchRoot: '.ut-squad-pitch-view',
-    slots: { slot: '.ut-squad-slot-view', filled: '.ut-item-view:not(.empty)', locked: '.locked, .disabled' },
+    // No `filled` signature: occupancy is reported as unknown (see signatures).
+    slots: { slot: '.ut-squad-slot-view', locked: '.locked, .disabled' },
     name: '.ut-navigation-bar-view h1',
     assetIdPatterns: {
       nation: /\/flags?\/(?:[a-z0-9_-]+\/)*(\d+)\.(?:png|webp|jpg)(?:$|\?)/,

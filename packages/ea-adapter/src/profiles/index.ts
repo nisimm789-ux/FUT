@@ -1,9 +1,10 @@
+import { fc27FixtureProfile } from './fc27-fixture.js';
 import { fc27LiveProfile } from './fc27-live.js';
 import { syntheticV1Profile } from './synthetic-v1.js';
 import type { EaAdapterProfile } from './types.js';
 
 export * from './types.js';
-export { fc27LiveProfile, syntheticV1Profile };
+export { fc27FixtureProfile, fc27LiveProfile, syntheticV1Profile };
 
 /** Most specific first: the synthetic probe is stricter than the live probe. */
 export const DEFAULT_PROFILES: readonly EaAdapterProfile[] = [syntheticV1Profile, fc27LiveProfile];

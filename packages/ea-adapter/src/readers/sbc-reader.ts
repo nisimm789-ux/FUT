@@ -45,9 +45,11 @@ export function createSbcReader(profile: SbcProfile, interpreter: RequirementInt
       const squadSize = resolveSquadSize(doc, root, profile, requirements, warnings);
       const slots = readSlots(doc, profile);
       let filledSlots: number | null = null;
-      if (slots) {
+      if (slots && slots.filled !== null) {
         if (slots.filled <= squadSize) filledSlots = slots.filled;
         else warnings.push(`filled slots (${slots.filled}) exceed squad size (${squadSize}); ignoring slot state`);
+      } else if (slots) {
+        warnings.push('slot occupancy unknown: profile has no verified filled-slot signature');
       }
 
       const rawName = profile.name ? (doc.querySelector(profile.name)?.textContent ?? '') : '';

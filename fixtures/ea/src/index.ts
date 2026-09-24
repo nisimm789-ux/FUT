@@ -41,6 +41,7 @@ export const FC27_PAGES = [
   'sbc-challenge-no-requirements',
   'sbc-challenge-no-squad-size',
   'sbc-challenge-inconsistent',
+  'sbc-challenge-live-empty-pitch.en',
   'home',
   'squads',
   'sbc-hub',

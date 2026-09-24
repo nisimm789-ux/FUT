@@ -13,7 +13,12 @@ const KEEP_CLASS = (c: string) => /^ut-[a-z0-9-]{1,60}$/.test(c) || /^icon-[a-z0
 const OPAQUE = new Set(['input', 'textarea', 'select', 'option', 'script', 'style', 'noscript', 'template', 'iframe', 'canvas', 'video', 'audio', 'object', 'embed']);
 const CATALOG_ASSET_KINDS = new Set(['flag', 'flags', 'league', 'leagues', 'leaguelogos', 'club', 'clubs', 'clubbadges']);
 
+/** Any lowercase CSS-like token without id-like digit runs (used for slot evidence). */
+export const SAFE_CLASS_TOKEN = (c: string) => /^[a-z][a-z0-9_-]{0,63}$/.test(c) && !/\d{5,}/.test(c);
+
 export interface NodeOptions {
+  /** Which class tokens to keep; defaults to EA/state allow-list. */
+  keepClass?: (c: string) => boolean;
   maxDepth: number;
   maxChildren: number;
   /** Capture sanitized text (only ever true for SBC requirement rows). */
@@ -35,7 +40,8 @@ export function textShape(text: string): TextShape {
 export function assetOf(el: Element, keepCatalogIds: boolean): InspectionNode['asset'] {
   if (el.tagName !== 'IMG') return null;
   const src = el.getAttribute('src') ?? '';
-  const match = /\/([a-z]+)\/(?:[a-z0-9_-]+\/)*?(\d+)\.(?:png|webp|jpe?g|svg)(?:$|\?)/i.exec(src);
+  // Kind = the directory that directly contains the numbered file (e.g. /content/fut/players/1.png -> "players").
+  const match = /\/([a-z][a-z0-9_-]*)\/(\d+)\.(?:png|webp|jpe?g|svg)(?:$|\?)/i.exec(src);
   if (!match?.[1]) return { kind: 'unknown', id: null };
   const kind = match[1].toLowerCase().slice(0, 32);
   const id = keepCatalogIds && CATALOG_ASSET_KINDS.has(kind) && match[2] ? Number(match[2]) : null;
@@ -52,8 +58,8 @@ function ownText(el: Element): string {
 export function describeNode(el: Element, options: NodeOptions, depth = 0): InspectionNode {
   options.budget.nodes -= 1;
   const tag = el.tagName.toLowerCase();
-  const classes = [...el.classList];
-  const kept = classes.filter(KEEP_CLASS).sort().slice(0, 16);
+  const classes = [...el.classList].map((c) => c.toLowerCase());
+  const kept = [...new Set(classes.filter(options.keepClass ?? KEEP_CLASS))].sort().slice(0, 16);
   const role = el.getAttribute('role');
   const opaque = OPAQUE.has(tag) || el.hasAttribute('contenteditable');
   let text: string | null = null;

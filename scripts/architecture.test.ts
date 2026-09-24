@@ -98,7 +98,8 @@ describe('architecture boundaries', () => {
     // Only string literals count: identifiers such as MIN_SQUAD_RATING are code, not UI text.
     const literals = (source: string) => [...source.matchAll(/(['"`])((?:\\.|(?!\1)[^\\\n])*)\1/g)].map((m) => m[2] ?? '');
     const offenders = candidates.filter((f) =>
-      literals(code(f)).filter((lit) => !/^[A-Z0-9_:]+$/.test(lit) && !/^[a-z0-9]+(-[a-z0-9]+)+$/.test(lit)).some((lit) => {
+      // Literals without whitespace are code tokens (enums, kebab/snake keys, "requirement:SQUAD_SIZE").
+      literals(code(f)).filter((lit) => /\s/.test(lit)).some((lit) => {
         const text = ` ${lit.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim()} `;
         return phrases.some((p) => text.includes(` ${p} `));
       }),

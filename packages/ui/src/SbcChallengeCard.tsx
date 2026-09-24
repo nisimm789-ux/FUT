@@ -24,7 +24,7 @@ export function SbcChallengeCard({ snapshot, freshness, staleReason, unverifiabl
         <dt>Players</dt>
         <dd data-testid="squad-size">
           {snapshot.squadSize}
-          {snapshot.filledSlots !== null ? ` (${snapshot.filledSlots} placed)` : ''}
+          {snapshot.filledSlots !== null ? ` (${snapshot.filledSlots} placed)` : ' (placement unknown)'}
         </dd>
         <dt>Identity</dt>
         <dd>

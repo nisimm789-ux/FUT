@@ -21,6 +21,15 @@ export interface ContextRule {
 export const SIGNAL_WEIGHTS = { view: 3, activeNav: 2, route: 1 } as const;
 
 /**
+ * Evidence status of an individual selector/signature, tracked separately so a
+ * profile can be partly proven against the live Web App.
+ * - verified:   confirmed by a sanitized live inspection report
+ * - unverified: hypothesis, still in use
+ * - disabled:   known wrong or unproven and deliberately NOT used (result = unknown)
+ */
+export type SignatureStatus = 'verified' | 'unverified' | 'disabled';
+
+/**
  * An EA adapter profile is the ONLY place that knows EA page structure.
  * When EA ships a UI change we add/replace a profile, not edit readers or UI.
  *
@@ -35,8 +44,10 @@ export interface EaAdapterProfile {
   readonly id: string;
   readonly fcVersion: 'SYNTHETIC' | 'FC27';
   readonly profileVersion: string;
-  /** False until validated against the live Web App (shown in health + UI). */
+  /** False until the WHOLE profile is validated against the live Web App (shown in health + UI). */
   readonly verified: boolean;
+  /** Per-signature evidence status (see SignatureStatus). */
+  readonly signatures?: Readonly<Record<string, SignatureStatus>>;
   /** Targets the real EA Web App. Combined with an origin check to decide provenance. */
   readonly live: boolean;
   /** Returns true if the document looks like the app shell this profile targets. */
@@ -66,8 +77,12 @@ export interface SbcProfile {
   completedClasses: readonly string[];
   /** Document-level selector of the squad pitch (observation scope #2). */
   pitchRoot?: string;
-  /** Slots relative to pitchRoot; `filled`/`locked` are matched on or inside the slot. */
-  slots?: { slot: string; filled: string; locked?: string };
+  /**
+   * Slots relative to pitchRoot; `filled`/`locked` are matched on or inside the
+   * slot. Without a `filled` signature, occupancy is UNKNOWN (filledSlots = null)
+   * rather than guessed.
+   */
+  slots?: { slot: string; filled?: string; locked?: string };
   /** Document-level selector for the challenge title (display only). */
   name?: string;
   /** Explicit structural encodings, when the page provides them (fixtures). */

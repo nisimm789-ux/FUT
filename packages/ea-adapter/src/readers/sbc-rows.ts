@@ -61,7 +61,8 @@ export function extractRequirementRows(root: Element, profile: SbcProfile): Requ
 export interface SlotSummary {
   total: number;
   active: number;
-  filled: number;
+  /** null = the profile has no verified occupancy signature (unknown, not zero). */
+  filled: number | null;
   locked: number;
 }
 
@@ -76,9 +77,9 @@ export function readSlots(doc: Document, profile: SbcProfile): SlotSummary | nul
   const slots = [...pitch.querySelectorAll(slot)];
   for (const el of slots) {
     if (locked && matchesOrContains(el, locked)) lockedCount += 1;
-    else if (matchesOrContains(el, filled)) filledCount += 1;
+    else if (filled && matchesOrContains(el, filled)) filledCount += 1;
   }
-  return { total: slots.length, active: slots.length - lockedCount, filled: filledCount, locked: lockedCount };
+  return { total: slots.length, active: slots.length - lockedCount, filled: filled ? filledCount : null, locked: lockedCount };
 }
 
 /** Cheap fingerprint of everything the SBC reader depends on. */
@@ -86,6 +87,8 @@ export function sbcFingerprint(doc: Document, profile: SbcProfile): string | nul
   const root = doc.querySelector(profile.requirementsRoot);
   if (!root) return null;
   const rows = extractRequirementRows(root, profile).map((r) => `${normalizeText(r.text)}|${r.completed}|${r.assets.map((a) => a.src).join(',')}`);
+  // Occupancy participates only when the profile has a filled signature; an
+  // unknown (null) occupancy can therefore never cause a false state change.
   const slots = readSlots(doc, profile);
   const name = profile.name ? (doc.querySelector(profile.name)?.textContent ?? '').trim() : '';
   const attrs = profile.structural

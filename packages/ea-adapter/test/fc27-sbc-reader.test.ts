@@ -2,14 +2,22 @@ import { describe, expect, it } from 'vitest';
 import { CONTRACTS_VERSION, SbcChallengeSnapshotSchema, type SbcChallengeSnapshot } from '@fc/contracts';
 import { loadClubFixture } from '@fc/ea-fixtures';
 import { LocalSolverRuntime } from '@fc/solver';
-import { createEaWebAdapter, type EaWebAdapter } from '../src/index.js';
+import { DEFAULT_PROFILES, createEaWebAdapter, fc27FixtureProfile, type EaWebAdapter } from '../src/index.js';
 import { LIVE_URL, LOCAL_URL, loadFc27 } from './helpers.js';
 
-const adapterAt = (url: string, extra: { safeModeThreshold?: number } = {}): EaWebAdapter =>
-  createEaWebAdapter({ document, window, getUrl: () => url, now: () => 1_000, ...extra });
+const adapterAt = (url: string, extra: { safeModeThreshold?: number; fixtureSlots?: boolean } = {}): EaWebAdapter =>
+  createEaWebAdapter({
+    document,
+    window,
+    getUrl: () => url,
+    now: () => 1_000,
+    ...(extra.safeModeThreshold !== undefined && { safeModeThreshold: extra.safeModeThreshold }),
+    // Fixture profile: our synthetic slot markup has a KNOWN filled signature.
+    ...(extra.fixtureSlots && { profiles: [fc27FixtureProfile] }),
+  });
 
-function readOk(url = LIVE_URL): SbcChallengeSnapshot {
-  const result = adapterAt(url).readSbcChallenge();
+function readOk(url = LIVE_URL, fixtureSlots = false): SbcChallengeSnapshot {
+  const result = adapterAt(url, { fixtureSlots }).readSbcChallenge();
   if (!result.ok) throw new Error(`${result.category}: ${result.message}`);
   return result.value;
 }
@@ -34,7 +42,8 @@ describe('FC 27 candidate SBC reader', () => {
     expect(snapshot).toMatchObject({
       schemaVersion: CONTRACTS_VERSION,
       squadSize: 11,
-      filledSlots: 4,
+      // Live profile has no verified occupancy signature: unknown, not guessed.
+      filledSlots: null,
       interpretationLocale: lang,
       name: 'Synthetic Upgrade 84',
       challengeIdKind: 'LOCAL_FINGERPRINT',
@@ -52,9 +61,10 @@ describe('FC 27 candidate SBC reader', () => {
 
   it('derives a stable local identity that ignores slot changes but not requirement changes', () => {
     loadFc27('sbc-challenge.en');
-    const a = readOk();
+    const a = readOk(LIVE_URL, true);
+    expect(a.filledSlots).toBe(4);
     document.querySelector('.ut-item-view.empty')?.classList.replace('empty', 'player');
-    const b = readOk();
+    const b = readOk(LIVE_URL, true);
     expect(b.filledSlots).toBe(5);
     expect(b.challengeId).toBe(a.challengeId);
     expect(a.challengeId).toMatch(/^local-[0-9a-f]{8}$/);
@@ -65,7 +75,49 @@ describe('FC 27 candidate SBC reader', () => {
 
   it('derives squad size from active (non-locked) slots when no size requirement exists', () => {
     loadFc27('sbc-challenge-seven.en');
-    expect(readOk()).toMatchObject({ squadSize: 7, filledSlots: 2 });
+    expect(readOk()).toMatchObject({ squadSize: 7, filledSlots: null });
+    expect(readOk(LIVE_URL, true)).toMatchObject({ squadSize: 7, filledSlots: 2 });
+  });
+
+  describe('confirmed live bug: empty FC 27 pitch reported as 11/11 filled', () => {
+    it('reports squadSize 11 and filledSlots null (unknown) for an empty live-style pitch', () => {
+      loadFc27('sbc-challenge-live-empty-pitch.en');
+      const adapter = adapterAt(LIVE_URL);
+      const result = adapter.readSbcChallenge();
+      if (!result.ok) throw new Error(result.message);
+      expect(result.value.squadSize).toBe(11);
+      expect(result.value.filledSlots).toBeNull();
+      expect(result.value.filledSlots).not.toBe(11);
+      expect(result.value.requirements).toEqual([
+        { id: 'req-1', via: 'text', type: 'PLAYER_QUALITY', min: 'BRONZE', max: 'BRONZE' },
+        { id: 'req-2', via: 'text', type: 'SQUAD_SIZE', count: 11 },
+      ]);
+      expect(result.warnings).toContain('slot occupancy unknown: profile has no verified filled-slot signature');
+      // Occupancy being unknown must not degrade the rest of the read.
+      expect(adapter.health.snapshot().capabilities.sbcReading).toBe('healthy');
+    });
+
+    it('the live profile carries no filled-slot selector and marks the signature disabled', () => {
+      const live = DEFAULT_PROFILES.find((p) => p.id === 'fc27-live');
+      expect(live?.sbc?.slots?.filled).toBeUndefined();
+      expect(live?.signatures?.['sbc:slotFilled']).toBe('disabled');
+      expect(live?.verified).toBe(false);
+      expect(live?.signatures).toMatchObject({
+        appShell: 'verified',
+        'context:SBC_CHALLENGE': 'verified',
+        'sbc:requirementsRoot': 'verified',
+        'sbc:requirementRow': 'verified',
+        'sbc:pitchRoot': 'verified',
+        'requirement:SQUAD_SIZE': 'verified',
+      });
+      expect(DEFAULT_PROFILES.map((p) => p.id)).not.toContain('fc27-fixture');
+    });
+
+    it('surfaces signature status in adapter health', () => {
+      loadFc27('sbc-challenge-live-empty-pitch.en');
+      const health = adapterAt(LIVE_URL).health.snapshot();
+      expect(health.profileSignatures['sbc:slotFilled']).toBe('disabled');
+    });
   });
 
   it('keeps uninterpretable requirements as UNKNOWN with fingerprints (never dropped)', () => {

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EaContextSnapshot } from '@fc/contracts';
-import { createDebouncedTask, createEaWebAdapter, type EaWebAdapter } from '../src/index.js';
+import { createDebouncedTask, createEaWebAdapter, fc27FixtureProfile, type EaWebAdapter } from '../src/index.js';
 import { LIVE_URL, loadFc27 } from './helpers.js';
 
 let adapter: EaWebAdapter;
@@ -11,7 +11,9 @@ let stop: () => void;
 beforeEach(() => {
   vi.useFakeTimers();
   loadFc27('sbc-challenge.en');
-  adapter = createEaWebAdapter({ document, window, getUrl: () => LIVE_URL, perfNow: () => Date.now() });
+  // Fixture profile: synthetic slots have a known filled signature, so
+  // slot-driven observation can be exercised (see live-profile tests below).
+  adapter = createEaWebAdapter({ document, window, getUrl: () => LIVE_URL, perfNow: () => Date.now(), profiles: [fc27FixtureProfile] });
   contexts = [];
   rereads = 0;
   stop = adapter.observe({ onContextChange: (c) => contexts.push(c.kind), onScopeChange: () => (rereads += 1) });
@@ -26,11 +28,15 @@ const settle = () => vi.advanceTimersByTimeAsync(400);
 const firstRow = () => document.querySelector('.ut-sbc-challenge-requirements-row');
 
 describe('scoped same-page observation', () => {
-  it('re-reads once when a player is placed in a slot', async () => {
-    document.querySelector('.ut-item-view.empty')?.classList.replace('empty', 'player');
+  it('re-reads once when a player is placed in a slot, and once when removed', async () => {
+    const slot = document.querySelector('.ut-item-view.empty');
+    slot?.classList.replace('empty', 'player');
     await settle();
     expect(contexts).toEqual(['SBC_CHALLENGE']);
     expect(rereads).toBe(1);
+    slot?.classList.replace('player', 'empty');
+    await settle();
+    expect(rereads).toBe(2);
   });
 
   it('collapses a burst of relevant mutations into a single re-read', async () => {
@@ -131,5 +137,20 @@ describe('createDebouncedTask', () => {
     task.cancel();
     await vi.advanceTimersByTimeAsync(500);
     expect(runs).toHaveLength(1);
+  });
+});
+
+describe('live profile while slot occupancy is unverified', () => {
+  it('slot DOM changes cannot trigger a false same-page state change', async () => {
+    vi.useFakeTimers();
+    loadFc27('sbc-challenge-live-empty-pitch.en');
+    const live = createEaWebAdapter({ document, window, getUrl: () => LIVE_URL, perfNow: () => Date.now() });
+    let n = 0;
+    const off = live.observe({ onContextChange: () => undefined, onScopeChange: () => (n += 1) });
+    for (const item of document.querySelectorAll('.ut-item-view')) item.classList.add('player', 'rare');
+    await vi.advanceTimersByTimeAsync(400);
+    off();
+    expect(n).toBe(0);
+    expect(live.perf.snapshot().counters.fingerprintUnchanged).toBeGreaterThan(0);
   });
 });

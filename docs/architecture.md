@@ -429,6 +429,22 @@ matches a sensitive pattern (emails, JWTs, bearer tokens, EA auth header /
 cookie names, credential keywords, account-id keys, long hex/base64 blobs,
 input values, password fields, storage access, `<script>` outside the dev site).
 
+### Live evidence log
+
+- **2026-09-24, first live report (en, SBC "Player Quality: Exactly Bronze",
+  "Number of Players in the Squad: 11")** — confirmed: app shell, SBC_CHALLENGE
+  detection (high), requirements root/rows, pitch root, slot selector,
+  SQUAD_SIZE and PLAYER_QUALITY parsing. **Refuted:** the filled-slot selector
+  `.ut-item-view:not(.empty)` (an empty pitch read as 11/11 filled — empty slots
+  also contain `.ut-item-view` and carry no `.empty`). The signature is now
+  `disabled`: `filledSlots` is `null` (unknown), occupancy is excluded from the
+  SBC fingerprint (no false re-reads), and Inspection Mode records per-slot
+  structure (`sbc.slotDetails`) so an empty-pitch report and a one-player report
+  can be diffed to derive the real signature. Per-signature status lives in
+  `fc27LiveProfile.signatures` and `AdapterHealth.profileSignatures`.
+  Tests that need known occupancy use `fc27FixtureProfile` (fixture-only, not a
+  default profile).
+
 ### Known FC 27 uncertainties (need live evidence)
 
 1. Every `fc27-live` selector: shell probe, view classes, tab-bar icon classes,
@@ -439,7 +455,8 @@ input values, password fields, storage access, `<script>` outside the dev site).
 4. Whether requirement rows expose nation/league/club badges with numeric ids
    in their image URLs, and the URL shape.
 5. Whether the DOM exposes any stable challenge/set id (currently local fingerprint).
-6. Whether SBCs with fewer than 11 players lock or remove pitch slots.
+6. Slot occupancy signature (pending the empty vs one-player capture pair),
+   and whether SBCs with fewer than 11 players lock or remove pitch slots.
 7. Whether some requirement data exists only in EA's JS view models. If so,
    the only acceptable route is a separately reviewed, read-only MAIN-world
    bridge (ADR-006 lists the conditions); it is **not** implemented.

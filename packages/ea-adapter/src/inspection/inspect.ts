@@ -6,6 +6,7 @@ import { extractRequirementRows, readSlots } from '../readers/sbc-rows.js';
 import { sanitizePath, sanitizeText } from '../sanitize.js';
 import { ADAPTER_VERSION } from '../version.js';
 import { describeNode } from './node.js';
+import { describeSlots } from './slots.js';
 import { findSensitiveContent } from './sensitive.js';
 
 export interface InspectOptions {
@@ -91,6 +92,7 @@ export function inspectCurrentScreen(options: InspectOptions): InspectionResult 
       ? describeTreeWithRowText(sbcRoot, sbcProfile.requirementRow, budget)
       : null;
 
+  const slotEvidence = sbcProfile ? describeSlots(doc, sbcProfile) : { pitchFound: false, slots: [] };
   const dry = adapter.dryReadSbc();
   const report: InspectionReport = {
     reportVersion: 1,
@@ -100,6 +102,8 @@ export function inspectCurrentScreen(options: InspectOptions): InspectionResult 
       adapterVersion: ADAPTER_VERSION,
       profileId: profile?.id ?? 'none',
       profileVerified: profile?.verified ?? false,
+      profileVersion: profile?.profileVersion ?? 'none',
+      signatures: { ...(profile?.signatures ?? {}) },
       fcVersion: profile?.fcVersion ?? 'NONE',
     },
     location: url,
@@ -116,7 +120,9 @@ export function inspectCurrentScreen(options: InspectOptions): InspectionResult 
     sbc: {
       rootFound: sbcRoot !== null,
       requirementRows,
+      pitchFound: slotEvidence.pitchFound,
       slots: sbcProfile ? pickSlots(readSlots(doc, sbcProfile)) : null,
+      slotDetails: slotEvidence.slots,
       tree,
     },
     candidates: requirementListCandidates(doc, budget),
@@ -147,7 +153,7 @@ export function inspectCurrentScreen(options: InspectOptions): InspectionResult 
   return { ok: true, report: parsed.data };
 }
 
-function pickSlots(s: { total: number; filled: number; locked: number } | null) {
+function pickSlots(s: { total: number; filled: number | null; locked: number } | null) {
   return s ? { total: s.total, filled: s.filled, locked: s.locked } : null;
 }
 

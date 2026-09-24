@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { InspectionReportSchema, type InspectionReport } from '@fc/contracts';
-import { createEaWebAdapter, findSensitiveContent, inspectCurrentScreen, reportToFixtureHtml } from '../src/index.js';
+import { createEaWebAdapter, fc27FixtureProfile, findSensitiveContent, inspectCurrentScreen, reportToFixtureHtml } from '../src/index.js';
 import { LIVE_URL, loadFc27, loadHtml } from './helpers.js';
 
 const SECRETS = {
@@ -43,7 +43,10 @@ describe('inspection mode', () => {
     expect(report.meta).toMatchObject({ profileId: 'fc27-live', profileVerified: false, fcVersion: 'FC27' });
     expect(report.document.lang).toBe('de');
     expect(report.sbc.rootFound).toBe(true);
-    expect(report.sbc.slots).toEqual({ total: 11, filled: 4, locked: 0 });
+    expect(report.sbc.slots).toEqual({ total: 11, filled: null, locked: 0 });
+    expect(report.sbc.pitchFound).toBe(true);
+    expect(report.sbc.slotDetails).toHaveLength(11);
+    expect(report.meta.signatures['sbc:slotFilled']).toBe('disabled');
     expect(report.sbc.requirementRows.map((r) => r.interpretedAs)).toEqual([
       'MIN_SQUAD_RATING', 'MIN_COUNT', 'MIN_CHEMISTRY', 'MIN_COUNT', 'MAX_SAME', 'MIN_UNIQUE', 'MIN_COUNT', 'SQUAD_SIZE',
     ]);
@@ -138,5 +141,62 @@ describe('inspection mode', () => {
       const report = { ...inspect(), cookies: 'x=y' };
       expect(() => reportToFixtureHtml(report, 'bad')).toThrow();
     });
+  });
+});
+
+describe('per-slot evidence (empty vs filled pitch)', () => {
+  it('exposes enough structure to tell an empty slot from a filled one, without text or ids', () => {
+    loadFc27('sbc-challenge.en'); // synthetic: slots 0-3 hold players, 4-10 empty
+    const player = document.querySelector('.ut-item-view.player');
+    player?.insertAdjacentHTML('beforeend', '<img src="/content/fut/players/231747.png" alt=""><span class="name">Kylian</span><div data-index="3" data-name="kylian" data-player-id="231747"></div>');
+    const [filled, , , , empty] = inspect().sbc.slotDetails;
+    if (!filled || !empty) throw new Error('slots missing');
+    expect(filled.structuralFingerprint).not.toBe(empty.structuralFingerprint);
+    expect(filled.descendantClasses.map((c) => c.className)).toContain('player');
+    expect(empty.descendantClasses.map((c) => c.className)).toContain('empty');
+    expect(filled.textNodes.withDigits).toBeGreaterThan(0);
+    expect(empty.textNodes.total).toBe(0);
+    expect(filled.assetKinds).toEqual(['players']);
+    expect(filled.imgCount).toBe(1);
+    expect(filled.dataAttributes).toEqual(['data-index', 'data-name', 'data-player-id']);
+    // Only tiny structural values survive; names and ids never do.
+    expect(filled.safeDataValues).toEqual([{ name: 'data-index', value: '3' }]);
+    expect(filled.filledBySignature).toBeNull(); // live profile: unknown
+    const json = JSON.stringify(filled);
+    expect(json).not.toContain('Kylian');
+    expect(json).not.toContain('kylian');
+    expect(json).not.toContain('231747');
+  });
+
+  it('reports what the active profile concludes per slot (fixture profile knows occupancy)', () => {
+    loadFc27('sbc-challenge.en');
+    const adapter = createEaWebAdapter({ document, window, getUrl: () => LIVE_URL, now: () => 0, profiles: [fc27FixtureProfile] });
+    const result = inspectCurrentScreen({ adapter, document, url: LIVE_URL, extensionVersion: '0.2.0', now: 0 });
+    if (!result.ok) throw new Error(result.reason);
+    expect(result.report.sbc.slotDetails.map((s) => s.filledBySignature)).toEqual([true, true, true, true, false, false, false, false, false, false, false]);
+    expect(result.report.sbc.slots).toEqual({ total: 11, filled: 4, locked: 0 });
+  });
+
+  it('an empty live-style pitch yields identical slot fingerprints and unknown occupancy', () => {
+    loadFc27('sbc-challenge-live-empty-pitch.en');
+    const report = inspect();
+    expect(report.sbc.slots).toEqual({ total: 11, filled: null, locked: 0 });
+    expect(new Set(report.sbc.slotDetails.map((s) => s.structuralFingerprint)).size).toBe(1);
+    expect(report.sbc.slotDetails[0]?.descendantClasses.map((c) => c.className)).toEqual(['ut-item-view', 'ut-item-view--main']);
+  });
+
+  it('a report pair (empty vs one player) can be diffed and replayed as fixtures', () => {
+    loadFc27('sbc-challenge-live-empty-pitch.en');
+    const a = inspect();
+    const first = document.querySelector('.ut-item-view');
+    first?.classList.add('player');
+    first?.insertAdjacentHTML('beforeend', '<span class="rating">84</span>');
+    const b = inspect();
+    const changed = b.sbc.slotDetails.filter((s, i) => s.structuralFingerprint !== a.sbc.slotDetails[i]?.structuralFingerprint).map((s) => s.index);
+    expect(changed).toEqual([0]);
+    // Replaying B reproduces the per-slot structure exactly.
+    loadHtml(reportToFixtureHtml(b, 'pair-b'));
+    const replay = inspect();
+    expect(replay.sbc.slotDetails.map((s) => s.structuralFingerprint)).toEqual(b.sbc.slotDetails.map((s) => s.structuralFingerprint));
   });
 });

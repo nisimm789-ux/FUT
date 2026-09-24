@@ -49,6 +49,8 @@ export const AdapterHealthSchema = z.object({
   profileId: z.string().min(1).max(64),
   /** False until the active profile has been validated against the live Web App. */
   profileVerified: z.boolean(),
+  /** Per-signature evidence status of the active profile (e.g. "sbc:slotFilled": "disabled"). */
+  profileSignatures: z.record(z.string().regex(/^[a-z][A-Za-z0-9:_-]{0,63}$/), z.enum(['verified', 'unverified', 'disabled'])),
   safeMode: z.boolean(),
   capabilities: z.record(CapabilityNameSchema, CapabilityStateSchema),
   lastFailure: AdapterFailureSchema.nullable(),

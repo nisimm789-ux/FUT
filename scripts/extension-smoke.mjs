@@ -105,13 +105,22 @@ try {
   let fcState = (await stateOf('fc27-live')).state;
   assert(fcState?.context.kind === 'SBC_CHALLENGE' && fcState.context.profileId === 'fc27-live', 'FC 27 structure detected as SBC_CHALLENGE by the fc27-live profile');
   assert(fcState.sbc?.snapshot.provenance === 'LOCAL_FIXTURE', 'localhost data is labelled LOCAL_FIXTURE, never EA_WEB_LIVE');
-  assert(fcState.sbc.snapshot.requirements.length === 8 && fcState.sbc.snapshot.filledSlots === 4, 'SBC read: 8 requirements, 4 filled slots');
+  assert(fcState.sbc.snapshot.requirements.length === 8 && fcState.sbc.snapshot.squadSize === 11, 'SBC read: 8 requirements, squad size 11');
+  assert(fcState.sbc.snapshot.filledSlots === null, 'live profile reports slot occupancy as unknown (null), never guessed');
 
   const rereadsBefore = fcState.perf.counters.rereads;
   await fc27.click('#fill');
   await fc27.waitForTimeout(500);
   fcState = (await stateOf('fc27-live')).state;
-  assert(fcState.sbc.snapshot.filledSlots === 5 && fcState.perf.counters.rereads === rereadsBefore + 1, 'same-page change re-read once without navigation');
+  assert(fcState.perf.counters.rereads === rereadsBefore, 'placing a player causes no false re-read while occupancy is unverified');
+  // Bump "Team Rating: Min. 84" -> 85: a meaningful change that alters the snapshot.
+  await fc27.click('#rating');
+  await fc27.waitForTimeout(500);
+  fcState = (await stateOf('fc27-live')).state;
+  assert(
+    fcState.perf.counters.rereads === rereadsBefore + 1 && fcState.sbc.snapshot.requirements[0]?.value === 85,
+    'same-page requirement change re-read once without navigation',
+  );
   await fc27.click('#noise');
   await fc27.waitForTimeout(1_000);
   const afterNoise = (await stateOf('fc27-live')).state;
@@ -121,6 +130,7 @@ try {
   const { tabId: fcTab } = await stateOf('fc27-live');
   const inspection = await worker.evaluate((tabId) => chrome.tabs.sendMessage(tabId, { type: 'INSPECT' }), fcTab);
   assert(inspection?.ok === true && inspection.report.context.kind === 'SBC_CHALLENGE', 'dev inspection report produced for the SBC screen');
+  assert(inspection.report.sbc.slotDetails.length === 11 && inspection.report.sbc.slots.filled === null, 'inspection report carries 11 per-slot structural summaries');
   const reportJson = JSON.stringify(inspection.report);
   assert(!/CookieSecretValue|StorageSecretValue|TypedSecretValue/.test(reportJson), 'inspection report contains no cookie, storage or input values');
 

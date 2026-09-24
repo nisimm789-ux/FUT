@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { requirementSupport } from '@fc/domain';
-import { createEaWebAdapter } from '@fc/ea-adapter';
+import { createEaWebAdapter, fc27FixtureProfile } from '@fc/ea-adapter';
 import { solveLocally } from '@fc/solver';
 import { noopTelemetry } from '@fc/telemetry';
 import { createContentController } from '../src/content/controller.js';
@@ -10,7 +10,7 @@ import { LIVE_URL, loadFc27, loadPage } from './helpers.js';
 
 afterEach(() => vi.useRealTimers());
 
-function setup(url = 'http://localhost:4173/site/', safeModeThreshold?: number) {
+function setup(url = 'http://localhost:4173/site/', safeModeThreshold?: number, fixtureSlots = false) {
   const states: TabState[] = [];
   const adapter = createEaWebAdapter({
     document,
@@ -19,6 +19,7 @@ function setup(url = 'http://localhost:4173/site/', safeModeThreshold?: number) 
     now: () => 0,
     perfNow: () => Date.now(),
     ...(safeModeThreshold !== undefined && { safeModeThreshold }),
+    ...(fixtureSlots && { profiles: [fc27FixtureProfile] }),
   });
   const controller = createContentController({ adapter, telemetry: noopTelemetry, now: () => 0, publishState: (s) => states.push(TabStateSchema.parse(s)) });
   const last = () => states.at(-1);
@@ -94,10 +95,10 @@ describe('content controller on FC 27 structure', () => {
     expect(result.status).toBe('UNSUPPORTED');
   });
 
-  it('re-reads on meaningful same-page changes and suppresses identical re-reads', async () => {
+  it('re-reads on meaningful same-page changes and suppresses identical re-reads (known slot signature)', async () => {
     vi.useFakeTimers();
     loadFc27('sbc-challenge.en');
-    const { controller, states, last, adapter } = setup(LIVE_URL);
+    const { controller, states, last, adapter } = setup(LIVE_URL, undefined, true);
     controller.start();
     const initial = states.length;
     expect(last()?.sbc?.snapshot.filledSlots).toBe(4);
@@ -117,6 +118,19 @@ describe('content controller on FC 27 structure', () => {
     controller.refresh();
     expect(adapter.perf.snapshot().counters.duplicateSnapshotsSuppressed).toBeGreaterThan(0);
     controller.stop();
+  });
+
+  it('live profile: placing players publishes nothing new while occupancy is unknown', async () => {
+    vi.useFakeTimers();
+    loadFc27('sbc-challenge-live-empty-pitch.en');
+    const { controller, states, last } = setup(LIVE_URL);
+    controller.start();
+    const before = states.length;
+    expect(last()?.sbc?.snapshot).toMatchObject({ squadSize: 11, filledSlots: null, provenance: 'EA_WEB_LIVE' });
+    for (const item of document.querySelectorAll('.ut-item-view')) item.classList.add('player');
+    await vi.advanceTimersByTimeAsync(400);
+    controller.stop();
+    expect(states.length).toBe(before);
   });
 
   it('keeps the last snapshot but marks it stale (never fabricates) when a re-read fails', () => {

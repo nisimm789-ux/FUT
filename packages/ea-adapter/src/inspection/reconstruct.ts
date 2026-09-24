@@ -34,6 +34,7 @@ export function reportToFixtureHtml(input: unknown, title: string, profile: EaAd
     n.children.forEach(collect);
   };
   if (report.sbc.tree) collect(report.sbc.tree);
+  for (const slot of report.sbc.slotDetails) if (slot.tree) collect(slot.tree);
   // The pitch is rebuilt from slot counts below; don't also emit placeholders for its classes.
   const rebuilt = new Set([pitchClass, slotClass, filledClass, rootClass, 'ut-tab-bar-view'].filter((c): c is string => c !== null));
   const extraViews = report.views
@@ -41,14 +42,19 @@ export function reportToFixtureHtml(input: unknown, title: string, profile: EaAd
     .map((v) => `    <div class="${esc(v.className)}"></div>`)
     .join('\n');
   const slots = report.sbc.slots;
-  const pitch =
-    slots && pitchClass && slotClass && filledClass
-      ? `    <div class="${pitchClass}">\n${Array.from({ length: slots.total }, (_, i) => {
-          const locked = i >= slots.total - slots.locked;
-          const filled = !locked && i < slots.filled;
-          return `      <div class="${slotClass}${locked && lockedClass ? ` ${lockedClass}` : ''}">${filled ? `<div class="${filledClass}"></div>` : ''}</div>`;
-        }).join('\n')}\n    </div>`
-      : '';
+  // Prefer the captured per-slot structure (exact skeleton, so empty vs filled
+  // slots are reproduced faithfully); fall back to counts for older reports.
+  const slotMarkup =
+    report.sbc.slotDetails.length > 0
+      ? report.sbc.slotDetails.map((s) => (s.tree ? renderNode(s.tree, 3) : `      <div class="${esc(s.classes.join(' '))}"></div>`)).join('\n')
+      : slots && slotClass
+        ? Array.from({ length: slots.total }, (_, i) => {
+            const locked = i >= slots.total - slots.locked;
+            const filled = !locked && slots.filled !== null && i < slots.filled && filledClass !== null;
+            return `      <div class="${slotClass}${locked && lockedClass ? ` ${lockedClass}` : ''}">${filled ? `<div class="${filledClass}"></div>` : ''}</div>`;
+          }).join('\n')
+        : '';
+  const pitch = report.sbc.pitchFound && pitchClass ? `    <div class="${pitchClass}">\n${slotMarkup}\n    </div>` : '';
   const tree = report.sbc.tree ? renderNode(report.sbc.tree, 2) : '';
   const lang = report.document.lang && /^[a-z]{2}(-[a-z0-9]{2,8})?$/i.test(report.document.lang) ? report.document.lang : 'en';
   const html = `<!doctype html>

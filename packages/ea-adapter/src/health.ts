@@ -13,7 +13,7 @@ export interface HealthTrackerOptions {
 
 export interface HealthTracker {
   snapshot(): AdapterHealth;
-  setProfile(profileId: string, supported: readonly CapabilityName[], verified: boolean): void;
+  setProfile(profileId: string, supported: readonly CapabilityName[], verified: boolean, signatures?: Readonly<Record<string, 'verified' | 'unverified' | 'disabled'>>): void;
   reportSuccess(capability: CapabilityName): void;
   reportFailure(capability: CapabilityName, category: ParserFailureCategory): void;
   /** True if the capability may be used now (not disabled/unsupported). */
@@ -35,6 +35,7 @@ export function createHealthTracker(options: HealthTrackerOptions): HealthTracke
 
   let profileId = 'none';
   let profileVerified = false;
+  let profileSignatures: Record<string, 'verified' | 'unverified' | 'disabled'> = {};
   const recentFailures: AdapterFailure[] = [];
   let supported = new Set<CapabilityName>();
   let states = initialStates();
@@ -68,6 +69,7 @@ export function createHealthTracker(options: HealthTrackerOptions): HealthTracke
       adapterVersion: options.adapterVersion,
       profileId,
       profileVerified,
+      profileSignatures: { ...profileSignatures },
       safeMode,
       capabilities,
       lastFailure,
@@ -88,11 +90,12 @@ export function createHealthTracker(options: HealthTrackerOptions): HealthTracke
 
   return {
     snapshot,
-    setProfile(nextProfileId, nextSupported, verified) {
+    setProfile(nextProfileId, nextSupported, verified, signatures = {}) {
       if (nextProfileId === profileId) return;
       update(() => {
         profileId = nextProfileId;
         profileVerified = verified;
+        profileSignatures = { ...signatures };
         supported = new Set(nextSupported);
         states = initialStates();
         consecutiveReadFailures = 0;

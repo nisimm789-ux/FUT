@@ -12,6 +12,7 @@ const validState = {
     adapterVersion: '0.2.0',
     profileId: 'synthetic-v1',
     profileVerified: true,
+    profileSignatures: {},
     safeMode: false,
     capabilities: { contextDetection: 'healthy', sbcReading: 'unknown', clubReading: 'unknown', squadReading: 'unsupported', packReading: 'unsupported', evolutionReading: 'unsupported', actions: 'disabled' },
     lastFailure: null,

@@ -115,7 +115,7 @@ export function createEaWebAdapter(deps: EaWebAdapterDeps): EaWebAdapter {
     if (next === profile) return;
     profile = next;
     readers = readersFor(profile, interpreter);
-    health.setProfile(profile?.id ?? 'none', supportedCapabilities(), profile?.verified ?? false);
+    health.setProfile(profile?.id ?? 'none', supportedCapabilities(), profile?.verified ?? false, profile?.signatures ?? {});
   }
 
   function supportedCapabilities(): CapabilityName[] {

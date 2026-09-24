@@ -71,6 +71,42 @@ export const InspectionRequirementRowSchema = z
   })
   .strict();
 
+/**
+ * Per-slot structural evidence for the SBC pitch, so an empty pitch can be
+ * diffed against one with a player placed. Only structure and counts: no
+ * text, no attribute values except tiny structural ones, no asset ids.
+ */
+export const InspectionSlotSchema = z
+  .object({
+    index: z.number().int().nonnegative(),
+    /** What the ACTIVE profile concludes (null = no signature / unknown). */
+    lockedBySignature: z.boolean().nullable(),
+    filledBySignature: z.boolean().nullable(),
+    /** Class tokens on the slot element itself (lowercased, id-like tokens dropped). */
+    classes: z.array(Token).max(24),
+    /** Class tokens found on descendants, with occurrence counts. */
+    descendantClasses: z.array(z.object({ className: Token, count: z.number().int().positive() }).strict()).max(64),
+    tagCounts: z.record(z.string().regex(/^[a-z][a-z0-9-]{0,31}$/), z.number().int().positive()),
+    descendantCount: z.number().int().nonnegative(),
+    maxDepth: z.number().int().nonnegative(),
+    imgCount: z.number().int().nonnegative(),
+    canvasCount: z.number().int().nonnegative(),
+    svgCount: z.number().int().nonnegative(),
+    /** Image asset kinds only (e.g. "players"); never ids. */
+    assetKinds: z.array(Token).max(8),
+    /** Counts of non-empty text nodes; the text itself is never captured. */
+    textNodes: z.object({ total: z.number().int().nonnegative(), withDigits: z.number().int().nonnegative(), withLetters: z.number().int().nonnegative() }).strict(),
+    /** data-* attribute NAMES on the slot and its descendants. */
+    dataAttributes: z.array(AttrName).max(24),
+    /** Only tiny structural values (0-99 or short lowercase tokens), e.g. data-index="3". */
+    safeDataValues: z.array(z.object({ name: AttrName, value: z.string().regex(/^([0-9]{1,2}|[a-z][a-z_-]{0,15})$/) }).strict()).max(16),
+    /** Hash of the slot's structure (tags + classes + nesting), text-free. */
+    structuralFingerprint: z.string().regex(/^[0-9a-f]{8}$/),
+    tree: InspectionNodeSchema.nullable(),
+  })
+  .strict();
+export type InspectionSlot = z.infer<typeof InspectionSlotSchema>;
+
 export const InspectionReportSchema = z
   .object({
     reportVersion: z.literal(1),
@@ -81,6 +117,8 @@ export const InspectionReportSchema = z
         adapterVersion: z.string().max(32),
         profileId: z.string().max(64),
         profileVerified: z.boolean(),
+        profileVersion: z.string().max(16),
+        signatures: z.record(z.string().regex(/^[a-z][A-Za-z0-9:_-]{0,63}$/), z.enum(['verified', 'unverified', 'disabled'])),
         fcVersion: z.string().max(16),
       })
       .strict(),
@@ -109,7 +147,10 @@ export const InspectionReportSchema = z
       .object({
         rootFound: z.boolean(),
         requirementRows: z.array(InspectionRequirementRowSchema).max(20),
-        slots: z.object({ total: z.number().int(), filled: z.number().int(), locked: z.number().int() }).strict().nullable(),
+        pitchFound: z.boolean(),
+        /** `filled` is null when the profile has no occupancy signature (unknown). */
+        slots: z.object({ total: z.number().int(), filled: z.number().int().nullable(), locked: z.number().int() }).strict().nullable(),
+        slotDetails: z.array(InspectionSlotSchema).max(30),
         tree: InspectionNodeSchema.nullable(),
       })
       .strict(),

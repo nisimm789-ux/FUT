@@ -14,6 +14,20 @@ export function HealthPanel({ health }: { health: AdapterHealth | null }) {
                 <span className="fca-pill fca-state-degraded" data-testid="unverified">UNVERIFIED PROFILE</span>
               )}
             </dd>
+            {Object.keys(health.profileSignatures).length > 0 && (
+              <>
+                <dt>Signatures</dt>
+                <dd data-testid="signatures">
+                  {(['verified', 'unverified', 'disabled'] as const)
+                    .map((st) => `${Object.values(health.profileSignatures).filter((v) => v === st).length} ${st}`)
+                    .join(' · ')}
+                  {Object.entries(health.profileSignatures)
+                    .filter(([, v]) => v === 'disabled')
+                    .map(([k]) => ` · off: ${k}`)
+                    .join('')}
+                </dd>
+              </>
+            )}
             <dt>Safe mode</dt>
             <dd>{health.safeMode ? 'ON — read capabilities disabled' : 'off'}</dd>
             {health.lastFailure && (

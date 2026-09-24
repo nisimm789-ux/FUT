@@ -10,6 +10,7 @@ const health: AdapterHealth = {
   adapterVersion: '0.2.0',
   profileId: 'synthetic-v1',
   profileVerified: true,
+  profileSignatures: {},
   safeMode: false,
   capabilities: {
     contextDetection: 'healthy',

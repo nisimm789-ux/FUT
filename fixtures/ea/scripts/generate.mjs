@@ -325,6 +325,28 @@ function fc27Files() {
     heading: 'Broken',
     rows: [reqRow('Rare: Min. 9 Players'), reqRow('# of Players in the Squad: 5')],
   });
+  // Regression for the first LIVE finding (2026-09-24): on the real FC 27
+  // Web App an EMPTY pitch still has an .ut-item-view in every slot and no
+  // .empty class, so `.ut-item-view:not(.empty)` reported 11/11 filled.
+  // Hand-reconstructed from the reported facts (not a raw capture); the reader
+  // must report filledSlots = null (unknown) until a verified signature exists.
+  out['fc27/sbc-challenge-live-empty-pitch.en.html'] = fc27Layout({
+    lang: 'en',
+    title: 'Live empty pitch',
+    heading: 'Synthetic Bronze Challenge',
+    selectedTab: 'sbc',
+    body: `    <section class="ut-sbc-squad-overview-view">
+      <div class="ut-squad-pitch-view">
+${Array.from({ length: 11 }, () => '        <div class="ut-squad-slot-view"><div class="ut-item-view"><div class="ut-item-view--main"></div></div></div>').join('\n')}
+      </div>
+      <div class="ut-sbc-challenge-requirements-view">
+        <ul class="ut-sbc-challenge-requirements-list">
+${reqRow('Player Quality: Exactly Bronze')}
+${reqRow('Number of Players in the Squad: 11')}
+        </ul>
+      </div>
+    </section>`,
+  });
   out['fc27/home.html'] = simpleFc27('ut-home-hub-view', 'home', 'fr');
   out['fc27/squads.html'] = simpleFc27('ut-squads-hub-view', 'squad', 'de');
   out['fc27/sbc-hub.html'] = simpleFc27('ut-sbc-hub-view', 'sbc', 'es');
